@@ -409,7 +409,7 @@ Concurrency groups cancel superseded runs; `permissions:` blocks are minimal
 | M0 **(done)** | Swap `uv_build` -> hatchling + hatch-vcs; ruff, mypy, `ci.yml`, `release.yml`, Apache-2.0, README | Lint, types, tests and build all green locally; wheel ships `py.typed` + a git-derived version |
 | M1 **(done)** | `states.py`, `events.py`, `models.py`, `diff.py`, `datasource/base.py` + `memory` | Diff engine fully unit-tested; 100% branch coverage on every module in this milestone |
 | M2 **(done)** | `datasource/persistence.py` + `poller.py` + `meter.py` lifecycle | Cross-process test: a flow runs in a subprocess against a sqlite logbook while the meter observes its states and per-atom progress from the parent |
-| M3 | `api/` core: `service`, `http`, `routes`, `router`, `serializers`, `sse` + `api/asgi.py` | REST + SSE standalone; mount-safe path handling unit-tested against both Starlette conventions |
+| M3 **(done)** | `api/` core: `service`, `http`, `routes`, `router`, `serializers`, `sse` + `api/asgi.py` | REST + SSE over a plain ASGI 3 callable, no web framework; mount-safe path handling tested against both Starlette conventions, and every link a payload emits is asserted to resolve to a real route |
 | M4 | `api/wsgi.py` | Shared routes byte-identical between the two callables |
 | M5 | `contrib/` adapters + `conformance.yml` matrix | Identical behaviour mounted in FastAPI, Flask and Django at `/` and at a deep prefix |
 | M6 | `cache/` via oslo.cache + `conf.py` + `oslo-config-generator` sample | Flow list served from cache; documented invalidation and TTL semantics; `Meter(poll=False)` worker mode |

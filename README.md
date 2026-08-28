@@ -24,6 +24,47 @@ provides that view:
 - **Live, in-process option.** Attach a listener plus a per-atom progress tap
   to an engine for sub-second latency and full DAG topology.
 
+## Using it
+
+Point a meter at a taskflow persistence backend and serve it:
+
+```python
+from taskflow_meter.api.asgi import ASGIApp
+from taskflow_meter.datasource.persistence import PersistenceDataSource
+from taskflow_meter.meter import Meter
+
+source = PersistenceDataSource(conf={"connection": "sqlite:///taskflow.db"})
+meter = Meter(source)  # polls the backend, keeps an event stream
+app = ASGIApp(meter)  # a plain ASGI 3 callable
+```
+
+`app` runs under any ASGI server (`uvicorn module:app`), or mounts inside an
+application you already have:
+
+```python
+host.mount("/taskflow", ASGIApp(meter))  # Starlette / FastAPI
+```
+
+Mounted apps never receive the ASGI lifespan scope, so the meter also starts
+itself on the first request. If your host application has a lifespan of its
+own, prefer `meter.start()` / `meter.stop()` from it.
+
+### Endpoints
+
+| Path | What it returns |
+| --- | --- |
+| `GET /healthz` | Liveness, version, and poller counters |
+| `GET /api/v1/flows` | Flows, newest first, filterable and paged |
+| `GET /api/v1/flows/{run_id}` | One flow with its atoms |
+| `GET /api/v1/flows/{run_id}/atoms` | Just the atoms |
+| `GET /api/v1/flows/{run_id}/events` | Event history from `?since_seq=` |
+| `GET /api/v1/flows/{run_id}/stream` | The same events as SSE, live |
+
+The stream honours `Last-Event-ID`, so a dropped connection resumes where it
+left off rather than leaving a hole. If the datasource keeps no history, the
+two event endpoints answer 501 and flow payloads omit their links, rather than
+serving an empty stream that cannot be told apart from silence.
+
 ## Requirements
 
 - Python 3.11+
