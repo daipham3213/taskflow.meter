@@ -66,6 +66,16 @@ taskflow-meter serve --connection sqlite:///taskflow.db
 
 That runs on `wsgiref` from the standard library and binds localhost. It is a
 development server -- put the WSGI callable behind gunicorn for anything real.
+
+For a fleet, run the collector: the flows publish to a broker, one process
+writes to the meter's own database, and the API workers read it without
+polling anything.
+
+```bash
+taskflow-meter upgrade --store-url postgresql://host/meter
+taskflow-meter collect --amqp-url amqp://broker// --store-url postgresql://host/meter
+taskflow-meter serve   --store-url postgresql://host/meter
+```
 One caveat for WSGI deployments: a synchronous worker holds a thread for as
 long as an SSE stream stays open, so use gevent or eventlet workers for
 streaming, or let clients poll `/events?since_seq=` instead.
@@ -148,6 +158,11 @@ serving an empty stream that cannot be told apart from silence.
 
 - Python 3.11+
 - taskflow 6.4.0+
+
+## Examples
+
+Runnable, and covered by the test suite so they cannot rot:
+[`examples/`](examples/).
 
 ## Development
 

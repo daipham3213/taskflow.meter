@@ -416,8 +416,8 @@ Concurrency groups cancel superseded runs; `permissions:` blocks are minimal
 | M5 **(done)** | `conf.py` (oslo.config), `contrib/` for paste, Pecan, FastAPI, Flask and Django, `running_atoms`, `docs/guide.md`, `conformance.yml` | Every endpoint runs through all six hosts at three mount depths and returns identical bytes; every link a payload emits resolves to a real route under that host's own prefix |
 | M6 *(skipped for now)* | `cache/` via oslo.cache + `oslo-config-generator` sample | Flow list served from cache; documented invalidation and TTL semantics (`conf.py` and the `poll = false` worker mode landed early, in M5) |
 | M7 **(done)** | `collect/` (listener, progress tap, pipeline, `attach()`) + `transports/` memory, datasource and http | Progress reported by a task is readable in ~1ms serial and ~17ms parallel, and the compiled graph is emitted as a `flow_structure` event; a broken publisher changes neither the flow's outcome nor its timing |
-| M8 | `datasource/sqlalchemy` + alembic; `transports/amqp` | Multi-process collector deployment |
-| M9 | Docs, examples, 1.0 release via tag | Published to PyPI through Trusted Publishing |
+| M8 **(done)** | `datasource/sqlalchemy` + alembic; `transports/amqp`; `fold.py` shared by both stores; `collect` and `upgrade` commands | A flow publishes to a broker, a collector writes the meter's own schema, and an API worker serves it with no polling -- with replay proven idempotent and the migration checked against the models |
+| M9 **(ready)** | `examples/`, `CHANGELOG.md`, `docs/releasing.md`, guide and README complete | Everything but the tag: the release workflow, the checklist and the trusted-publisher setup are documented, and tagging is the maintainer's call |
 
 M0-M5 is the smallest genuinely useful product: point it at an existing
 taskflow database, mount it into whatever service you already run, and get a
@@ -434,3 +434,6 @@ live progress API without touching the flows.
    bound to localhost). Keystone middleware is a plausible M9.
 4. **Multi-book scoping** — whether the API should expose LogBooks as
    first-class resources or keep `book_id` as a filter only.
+5. **Auth on the collector's queue** — the AMQP transport takes a URL and
+   nothing else; a deployment wanting per-publisher credentials or TLS
+   currently supplies them in the URL.

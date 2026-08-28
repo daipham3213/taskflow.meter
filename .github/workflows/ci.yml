@@ -29,7 +29,7 @@ jobs:
       - name: ruff format
         run: uv run --group dev ruff format --check --diff .
       - name: flake8 (hacking)
-        run: uv run --group dev flake8 taskflow_meter tests tools
+        run: uv run --group dev flake8 taskflow_meter tests tools examples
       - name: mypy
         run: uv run --group dev mypy
       - name: Test tree mirrors the package

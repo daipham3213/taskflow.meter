@@ -147,11 +147,51 @@ localhost. It is a development server.
 
 ### Many API workers
 
-Each worker that polls is another poller on the same database. With N
-gunicorn workers, either accept N pollers at a slow interval, or set
-`poll = false` on the workers and let one collector process own the polling.
-With polling off there is no event history, and the event and stream
-endpoints report 501 rather than serving an empty stream.
+Each worker that polls is another poller on the same database. With N gunicorn
+workers, either accept N pollers at a slow interval, or set `poll = false` on
+the workers and give them a store somebody else fills.
+
+Reading a taskflow backend with `poll = false` means no event history, so the
+event and stream endpoints report 501 rather than serving an empty stream. To
+keep those, run the collector deployment below.
+
+### The collector deployment
+
+For a fleet: the flows publish to a broker, one process writes to the meter's
+own database, and the workers read it.
+
+```bash
+# once
+taskflow-meter upgrade --store-url postgresql://user@host/meter
+
+# the collector: consumes the broker, writes the store
+taskflow-meter collect   --amqp-url amqp://guest@broker//   --store-url postgresql://user@host/meter
+
+# the API workers: read the store, poll nothing
+taskflow-meter serve --store-url postgresql://user@host/meter
+```
+
+The flows publish by attaching with an AMQP transport:
+
+```python
+from taskflow_meter.collect import attach
+from taskflow_meter.transports.amqp import AMQPTransport
+
+publisher = AMQPTransport("amqp://guest@broker//")
+with attach(engine, publishers=[publisher]):
+    engine.run()
+```
+
+The queue is durable and declared on publish, so a flow that starts before the
+collector does is not a lost run. Events are keyed on `(run_id, seq)`, so a
+collector that reconnects and redelivers writes nothing twice.
+
+Unlike the persistence datasource, which inherits taskflow's retention, this
+store keeps what it is told until told otherwise:
+
+```python
+store.prune(before=time.time() - 30 * 86400)
+```
 
 ---
 

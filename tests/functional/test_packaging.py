@@ -83,3 +83,23 @@ def test_declared_transports_all_resolve() -> None:
     }
     for entry_point in found:
         assert issubclass(entry_point.load(), Publisher)
+
+
+def test_the_migrations_are_installed_beside_the_code() -> None:
+    """They are package data, not source-tree files.
+
+    A wheel without them installs fine and then fails at
+    ``taskflow-meter upgrade``, which is the worst place to find out.
+    """
+    from taskflow_meter.datasource.sqlalchemy.source import MIGRATIONS
+
+    assert (MIGRATIONS / "env.py").is_file()
+    assert (MIGRATIONS / "script.py.mako").is_file()
+    versions = sorted((MIGRATIONS / "versions").glob("*.py"))
+    assert versions, "no migration scripts were installed"
+
+
+def test_the_package_declares_it_is_typed() -> None:
+    from importlib.resources import files
+
+    assert files("taskflow_meter").joinpath("py.typed").is_file()

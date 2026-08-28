@@ -15,7 +15,7 @@ authors = [
 ]
 keywords = ["taskflow", "openstack", "workflow", "monitoring", "asgi", "wsgi"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
     "Operating System :: OS Independent",
@@ -164,7 +164,7 @@ docstring-code-format = true
 python_version = "3.11"
 strict = true
 warn_unreachable = true
-files = ["taskflow_meter", "tests", "tools"]
+files = ["taskflow_meter", "tests", "tools", "examples"]
 # taskflow ships no type information, and this package exists to extend
 # its classes -- listeners, tasks in the test suite.  Refusing to subclass
 # Any would mean giving up on typing the modules that do it.
