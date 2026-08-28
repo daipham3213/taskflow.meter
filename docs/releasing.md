@@ -6,15 +6,26 @@ the tag.
 
 ## Once, before the first release
 
-1. **Create the PyPI project's trusted publisher.** On PyPI, under the
-   project's *Publishing* settings, add a GitHub publisher:
+1. **Create a PyPI *pending* publisher.** The project does not exist on PyPI
+   until the first upload, so there are no project settings to add a publisher
+   to yet. Use <https://pypi.org/manage/account/publishing/>, which is the
+   flow for exactly this case -- it reserves the name and authorises the
+   workflow in one step:
 
    | Field | Value |
    | --- | --- |
+   | PyPI project name | `taskflow-meter` |
    | Owner | the GitHub org or user |
    | Repository | `taskflow.meter` |
-   | Workflow | `release.yml` |
-   | Environment | `pypi` |
+   | Workflow name | `release.yml` |
+   | Environment name | `pypi` |
+
+   Note the repository is `taskflow.meter` while the project is
+   `taskflow-meter`; they differ, and PyPI matches on the repository.
+
+   After the first successful upload the pending publisher becomes an ordinary
+   one under the project's *Publishing* settings, and later releases need
+   nothing further.
 
 2. **Create the `pypi` environment** in the repository's settings. The release
    workflow names it, and `id-token: write` is granted only to the job that

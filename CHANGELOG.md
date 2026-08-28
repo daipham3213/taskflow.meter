@@ -7,7 +7,7 @@ entry lands here in the release it ships in.
 
 Nothing yet.
 
-## 1.0.0
+## 1.0.0 - 2026-08-28
 
 First release. Monitoring interfaces for observing
 [OpenStack TaskFlow](https://opendev.org/openstack/taskflow) flow execution
