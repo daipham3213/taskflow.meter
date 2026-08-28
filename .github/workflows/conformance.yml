@@ -42,10 +42,15 @@ jobs:
           --cov=taskflow_meter.contrib
           --cov=taskflow_meter.api
           --cov-report=term-missing
+      # A block scalar, not a folded one: folding joins the lines with a
+      # space, and `python -c " import ..."` is an IndentationError.
       - name: Report the framework versions the run used
         if: always()
-        run: >
-          uv run --group dev python -c "
-          import importlib.metadata as m;
-          print('\n'.join(f'{n}=={m.version(n)}' for n in
-          ['fastapi','starlette','flask','django','pecan','WebOb']))"
+        run: |
+          uv run --group dev python - <<'PY'
+          import importlib.metadata as meta
+
+          for name in ("fastapi", "starlette", "flask",
+                       "django", "pecan", "WebOb"):
+              print(f"{name}=={meta.version(name)}")
+          PY
