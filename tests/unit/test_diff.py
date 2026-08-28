@@ -1,3 +1,15 @@
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
 """The diff engine: snapshot pair in, event stream out.
 
 This is the module the read-only producer is built on, so the cases below
@@ -12,8 +24,10 @@ import pytest
 
 from taskflow_meter import states
 from taskflow_meter.diff import diff_flow
-from taskflow_meter.events import EventKind, SequenceAllocator
-from tests.conftest import make_atom, make_flow
+from taskflow_meter.events import EventKind
+from taskflow_meter.events import SequenceAllocator
+from tests.conftest import make_atom
+from tests.conftest import make_flow
 
 
 def test_no_change_produces_nothing_and_burns_no_sequence_numbers(

@@ -46,7 +46,7 @@ uv build                           # build sdist + wheel
 `tox` is available too, and is what CI reproduces:
 
 ```bash
-uvx tox -e pep8          # lint, types, and the test-tree check
+uvx tox -e pep8          # ruff, hacking, mypy, and the test-tree check
 uvx tox -e py312         # tests on one interpreter
 uvx tox                  # the whole matrix
 ```

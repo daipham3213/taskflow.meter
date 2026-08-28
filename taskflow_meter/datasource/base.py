@@ -1,3 +1,15 @@
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
 """The contract every datasource implements.
 
 Read and write are separate on purpose.  The primary datasource reads
@@ -15,7 +27,8 @@ from types import TracebackType
 from typing import Self
 
 from taskflow_meter.events import Event
-from taskflow_meter.models import AtomSnapshot, FlowSnapshot
+from taskflow_meter.models import AtomSnapshot
+from taskflow_meter.models import FlowSnapshot
 
 #: Flows returned by a single unqualified listing.
 DEFAULT_FLOW_LIMIT = 50
