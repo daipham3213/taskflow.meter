@@ -54,7 +54,11 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
 
   github-release:
-    needs: build
+    # After the publish, not beside it. Run in parallel and a failed
+    # upload still leaves a GitHub release behind, so the retry then
+    # fails on a release that already exists -- with the tag already
+    # burnt, since PyPI never lets a version be reused.
+    needs: pypi
     runs-on: ubuntu-latest
     permissions:
       contents: write
