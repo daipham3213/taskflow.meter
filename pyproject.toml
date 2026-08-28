@@ -27,23 +27,23 @@ classifiers = [
     "Topic :: System :: Monitoring",
     "Typing :: Typed",
 ]
+# Floors are the oldest release each library is actually tested against,
+# not the newest one that happens to be installed here: this package is
+# meant to be co-installed into a service whose own constraints it does
+# not get to choose.  A `lowest-direct` job in CI installs exactly these.
+#
+# Only what is imported is declared.  oslo.utils, oslo.serialization and
+# stevedore arrive with taskflow, and nothing here imports them.
 dependencies = [
-    "taskflow>=6.4.0",
-    "oslo.cache>=3.0.0",
-    "oslo.config>=9.0.0",
-    "oslo.serialization>=2.18.0",
-    "oslo.utils>=3.33.0",
-    "stevedore>=1.20.0",
+    "taskflow>=4.2.0",
+    "oslo.config>=6.9.0",
 ]
 
 [project.optional-dependencies]
-memcache = ["oslo.cache[dogpile]>=3.0.0"]
-etcd = ["oslo.cache[etcd3gw]>=3.0.0"]
-sqlalchemy = ["SQLAlchemy>=2.0", "alembic>=1.13"]
-amqp = ["kombu>=5.0"]
-prometheus = ["prometheus-client>=0.20"]
+sqlalchemy = ["SQLAlchemy>=1.4.0", "alembic>=1.2.0"]
+amqp = ["kombu>=5.1.0"]
 all = [
-    "taskflow-meter[memcache,etcd,sqlalchemy,amqp,prometheus]",
+    "taskflow-meter[sqlalchemy,amqp]",
 ]
 
 [project.scripts]
@@ -81,28 +81,36 @@ taskflow_meter = "taskflow_meter.conf:list_opts"
 dev = [
     "hacking>=8.1",
     "mypy>=1.11",
-    "pytest>=8.0",
-    "pytest-cov>=5.0",
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
     "ruff>=0.6",
     # taskflow's sqlite persistence backend, which the persistence
     # datasource is tested against.  SQLAlchemy-Utils is its requirement,
     # not ours.
-    "SQLAlchemy>=2.0",
+    "SQLAlchemy>=1.4.0",
     "SQLAlchemy-Utils>=0.41",
-    "alembic>=1.13",
+    "alembic>=1.2.0",
+    # uuidutils, used by the fixtures and the examples.  It arrives with
+    # taskflow anyway; naming it here keeps the tests honest about it.
+    "oslo.utils>=3.33.0",
     # The broker the AMQP transport speaks; kombu ships an in-process
     # transport, so the collector path is testable without RabbitMQ.
-    "kombu>=5.0",
-    # The hosts the contrib adapters are tested inside.  Test-only: a
-    # deployment hosting the meter in Django already has Django, so the
-    # adapters declare no runtime dependency of their own.
-    "Django>=4.2",
-    "Flask>=3.0",
-    "PasteDeploy>=3.0",
-    "WebOb>=1.8",
-    "WebTest>=3.0",
-    "fastapi>=0.110",
-    "pecan>=1.5",
+    "kombu>=5.1.0",
+    # The hosts the contrib adapters are tested inside, at the oldest
+    # version each is tested at.  Test-only: a deployment hosting the
+    # meter in Django already has Django, so the adapters declare no
+    # runtime dependency of their own.
+    #
+    # Flask 2.3.0 works, but its *test client* reads werkzeug.__version__
+    # until 2.3.3 and werkzeug 3.1 removed it, so 2.3.3 is as low as this
+    # can be exercised rather than as low as the adapter goes.
+    "Django>=3.2",
+    "Flask>=2.3.3",
+    "PasteDeploy>=2.0",
+    "WebOb>=1.8.5",
+    "WebTest>=2.0.35",
+    "fastapi>=0.100",
+    "pecan>=1.4",
 ]
 
 [tool.hatch.version]
@@ -172,7 +180,7 @@ disallow_subclassing_any = false
 
 [[tool.mypy.overrides]]
 # None of these ship type information.
-module = ["taskflow.*", "oslo_cache.*", "oslo_config.*", "oslo_serialization.*", "oslo_utils.*", "stevedore.*"]
+module = ["taskflow.*", "oslo_config.*", "oslo_utils.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

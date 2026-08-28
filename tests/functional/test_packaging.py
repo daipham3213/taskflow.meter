@@ -26,13 +26,68 @@ def test_version_is_a_non_empty_string() -> None:
     assert taskflow_meter.__version__
 
 
-def test_taskflow_is_importable_at_the_required_floor() -> None:
-    # The whole package is built against notifier/persistence APIs that are
-    # only stable from taskflow 6.x onwards.
-    from taskflow import version as taskflow_version
+def test_every_taskflow_api_the_package_uses_exists() -> None:
+    """What the declared taskflow floor is actually claiming.
 
-    major = int(taskflow_version.version_string().split(".")[0])
-    assert major >= 6
+    The floor is not a guess at a major version -- it is the oldest
+    release carrying all of this.  Pinning the *names* rather than the
+    number is what stops the floor being lowered past something the
+    package silently needs.
+    """
+    from taskflow import exceptions as tf_exc
+    from taskflow import states as tf_states
+    from taskflow import task as tf_task
+    from taskflow.engines.action_engine import compiler as tf_compiler
+    from taskflow.listeners import base as tf_listeners
+    from taskflow.persistence import backends as tf_backends
+    from taskflow.persistence import models as tf_models
+
+    assert hasattr(tf_compiler, "ATOMS")
+    assert hasattr(tf_task, "EVENT_UPDATE_PROGRESS")
+    assert hasattr(tf_models, "atom_detail_type")
+    assert hasattr(tf_exc, "NotFound")
+    assert hasattr(tf_listeners, "Listener")
+    assert hasattr(tf_backends, "fetch")
+    for state in (
+        "SUCCESS",
+        "FAILURE",
+        "PENDING",
+        "RUNNING",
+        "REVERTING",
+        "REVERTED",
+        "REVERT_FAILURE",
+        "RETRYING",
+        "IGNORE",
+        "SUSPENDED",
+        "EXECUTE",
+        "REVERT",
+    ):
+        assert hasattr(tf_states, state), state
+
+
+def test_the_declared_floors_are_the_ones_that_were_tested() -> None:
+    """Guards the floors against being edited without being re-tested.
+
+    CI runs a ``lowest-direct`` job that installs exactly these, so a
+    floor changed here and not verified there fails somewhere obvious
+    rather than in somebody else's deployment.
+    """
+    from importlib.metadata import requires
+
+    declared = {}
+    for line in requires("taskflow-meter") or []:
+        name, _, rest = line.partition(">=")
+        # Names come back normalised, and every extra repeats a floor
+        # the extra it belongs to has already stated.
+        declared[name.strip()] = rest.partition(";")[0].strip()
+
+    assert declared == {
+        "taskflow": "4.2.0",
+        "oslo-config": "6.9.0",
+        "sqlalchemy": "1.4.0",
+        "alembic": "1.2.0",
+        "kombu": "5.1.0",
+    }
 
 
 def test_declared_datasource_plugins_all_resolve() -> None:

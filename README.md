@@ -157,7 +157,26 @@ serving an empty stream that cannot be told apart from silence.
 ## Requirements
 
 - Python 3.11+
-- taskflow 6.4.0+
+- taskflow 4.2.0+
+- oslo.config 6.9.0+
+
+Floors are deliberately low: this package is meant to be co-installed into
+a service whose dependency versions it does not get to choose. They are the
+oldest release of each library the suite actually passes against, not the
+oldest that looks plausible -- a `lowest-direct` CI job installs exactly
+these and runs the whole suite on them.
+
+Everything else is optional, and only needed by the feature that imports it:
+
+| Extra | Pulls in | Needed for |
+| --- | --- | --- |
+| `sqlalchemy` | SQLAlchemy 1.4+, alembic 1.2+ | The collector's own store |
+| `amqp` | kombu 5.1+ | Publishing events to a broker |
+| `all` | both | |
+
+The contrib adapters declare no dependency on their hosts -- a deployment
+mounting the meter in Django already has Django. They are tested against
+Django 3.2, Flask 2.3.3, FastAPI 0.100, Pecan 1.4 and PasteDeploy 2.0.
 
 ## Examples
 

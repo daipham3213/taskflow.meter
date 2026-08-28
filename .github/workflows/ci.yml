@@ -61,6 +61,33 @@ jobs:
           path: coverage.xml
           if-no-files-found: error
 
+  lowest-direct:
+    # The declared floors, installed exactly. Without this the floors are
+    # a claim nobody checks: every other job resolves to the newest
+    # release, so a floor can be wrong for years and still be green.
+    #
+    # Pinned to 3.11 on purpose. The floors are the oldest releases that
+    # work on the oldest Python this package supports; several of them
+    # predate 3.12 and do not import there, which is fine -- a 3.12
+    # deployment resolves to something newer.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          python-version: "3.11"
+      - name: Resolve every direct dependency to its declared floor
+        run: |
+          uv lock --python 3.11 --resolution lowest-direct
+          uv sync --python 3.11 --group dev --all-extras \
+            --resolution lowest-direct
+          uv pip list
+      - name: pytest
+        run: uv run --python 3.11 --frozen --no-sync pytest
+
   build:
     runs-on: ubuntu-latest
     steps:

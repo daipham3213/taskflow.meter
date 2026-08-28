@@ -39,8 +39,8 @@ topology, richer failure detail), not a prerequisite.
 | Web layer | Zero-framework: hand-rolled ASGI and WSGI callables | No Starlette/FastAPI dependency; maximum embeddability into existing OpenStack services |
 | Embedding | Mountable into **any** ASGI/WSGI framework at any sub-path, plus optional native adapters in `contrib/` | Standalone `serve` is one deployment mode, not the only one |
 | Primary datasource | Read-only adapter over taskflow persistence | Monitors existing deployments untouched |
-| Caching / shared state | `oslo.cache` (not a direct redis client) | Operator picks the backend (dict, memcached, pymemcache, redis, etcd3gw) |
-| Config | `oslo.config` | Already required by oslo.cache; matches OpenStack operator expectations |
+| Caching / shared state | `oslo.cache` (not a direct redis client) | Operator picks the backend (dict, memcached, pymemcache, redis, etcd3gw). Deferred with M6, so it is not a dependency yet |
+| Config | `oslo.config` | Matches OpenStack operator expectations; the only hard dependency besides taskflow |
 | Build backend | hatchling + hatch-vcs | Per project requirement; replaces the current `uv_build` |
 | License | Apache-2.0 | Matches the taskflow/OpenStack ecosystem |
 
@@ -317,14 +317,15 @@ name = "taskflow-meter"
 dynamic = ["version"]
 requires-python = ">=3.11"
 license = "Apache-2.0"
-dependencies = ["taskflow>=6.4.0", "oslo.config>=9.0.0", "oslo.cache>=3.0.0",
-                "oslo.serialization>=2.18.0", "oslo.utils>=3.33.0", "stevedore>=1.20.0"]
+# As shipped: only what is imported is declared, at the oldest version
+# the suite passes against.  oslo.cache/serialization/utils and stevedore
+# came out again -- nothing imports them.  memcache/etcd/prometheus extras
+# return with the milestones that need them (M6, /metrics).
+dependencies = ["taskflow>=4.2.0", "oslo.config>=6.9.0"]
 
 [project.optional-dependencies]
-memcache    = ["oslo.cache[dogpile]"]
-sqlalchemy  = ["SQLAlchemy>=2.0", "alembic>=1.13"]
-amqp        = ["kombu>=4.3.0"]
-prometheus  = ["prometheus-client>=0.20"]
+sqlalchemy  = ["SQLAlchemy>=1.4.0", "alembic>=1.2.0"]
+amqp        = ["kombu>=5.1.0"]
 all         = [...]
 
 [project.scripts]

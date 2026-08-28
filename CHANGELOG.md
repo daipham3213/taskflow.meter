@@ -5,7 +5,44 @@ entry lands here in the release it ships in.
 
 ## Unreleased
 
-Nothing yet.
+### Dependencies lowered
+
+This package is meant to be co-installed into a service whose dependency
+versions it does not get to choose, and 1.0.0 asked for far more than it
+used. Every floor is now the oldest release the suite actually passes
+against, found by running it rather than by reading release notes.
+
+| | 1.0.0 | now |
+| --- | --- | --- |
+| taskflow | >=6.4.0 | **>=4.2.0** |
+| oslo.config | >=9.0.0 | **>=6.9.0** |
+| oslo.cache | >=3.0.0 | *dropped* |
+| oslo.serialization | >=2.18.0 | *dropped* |
+| oslo.utils | >=3.33.0 | *dropped* |
+| stevedore | >=1.20.0 | *dropped* |
+| SQLAlchemy (extra) | >=2.0 | **>=1.4.0** |
+| alembic (extra) | >=1.13 | **>=1.2.0** |
+| kombu (extra) | >=5.0 | **>=5.1.0** |
+
+- **Four required dependencies removed.** Nothing in the package imports
+  oslo.cache, oslo.serialization, oslo.utils or stevedore. The three that
+  taskflow needs arrive with taskflow. oslo.cache was reserved for a caching
+  datasource that was deferred; it returns as an extra when that lands.
+- **The `memcache`, `etcd` and `prometheus` extras are gone.** All three
+  installed libraries no code imported. `pip install taskflow-meter[memcache]`
+  now warns that the extra is unknown instead of pulling in dogpile.cache.
+- **`kombu` moved up**, not down: 5.0 does not import on Python 3.11.
+- **oslo.config compatibility fix.** `resolve_connection()` raised
+  `RequiredOptError` with the group *name*; oslo.config only learned to
+  accept a string there recently, and older versions raise from `__str__`
+  while formatting it -- burying the very message being reported. It now
+  passes the `OptGroup`, which every version handles.
+- **A `lowest-direct` CI job** installs every floor exactly, on Python 3.11,
+  and runs the whole suite. The floors were a claim nobody checked before:
+  every other job resolves to the newest release.
+- The contrib adapters still declare no dependency on their hosts, and are
+  now exercised against Django 3.2, Flask 2.3.3, FastAPI 0.100, Pecan 1.4 and
+  PasteDeploy 2.0.
 
 ## 1.0.0 - 2026-08-28
 
