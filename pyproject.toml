@@ -1,0 +1,147 @@
+[build-system]
+requires = ["hatchling>=1.27", "hatch-vcs>=0.4"]
+build-backend = "hatchling.build"
+
+[project]
+name = "taskflow-meter"
+dynamic = ["version"]
+description = "Monitoring interfaces (ASGI, WSGI, datasource) for OpenStack TaskFlow flow execution progress"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Pham Le Gia Dai", email = "daipham.3213@gmail.com" },
+]
+keywords = ["taskflow", "openstack", "workflow", "monitoring", "asgi", "wsgi"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: System :: Monitoring",
+    "Typing :: Typed",
+]
+dependencies = [
+    "taskflow>=6.4.0",
+    "oslo.cache>=3.0.0",
+    "oslo.config>=9.0.0",
+    "oslo.serialization>=2.18.0",
+    "oslo.utils>=3.33.0",
+    "stevedore>=1.20.0",
+]
+
+[project.optional-dependencies]
+memcache = ["oslo.cache[dogpile]>=3.0.0"]
+etcd = ["oslo.cache[etcd3gw]>=3.0.0"]
+sqlalchemy = ["SQLAlchemy>=2.0", "alembic>=1.13"]
+amqp = ["kombu>=4.3.0"]
+prometheus = ["prometheus-client>=0.20"]
+all = [
+    "taskflow-meter[memcache,etcd,sqlalchemy,amqp,prometheus]",
+]
+
+[project.scripts]
+taskflow-meter = "taskflow_meter.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/daipham3213/taskflow-meter"
+Source = "https://github.com/daipham3213/taskflow-meter"
+Issues = "https://github.com/daipham3213/taskflow-meter/issues"
+Changelog = "https://github.com/daipham3213/taskflow-meter/releases"
+
+# Plugin entry points (taskflow_meter.datasource / .transport) and the
+# oslo.config.opts hook are declared as their modules land -- an entry point
+# pointing at a module that does not exist yet breaks plugin discovery for
+# everything else in the same group.
+
+[dependency-groups]
+dev = [
+    "mypy>=1.11",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+]
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.0"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "taskflow_meter/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["taskflow_meter"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/taskflow_meter",
+    "/tests",
+    "/docs",
+    "/README.md",
+    "/LICENSE",
+]
+
+[tool.ruff]
+line-length = 79
+target-version = "py311"
+src = ["taskflow_meter", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "A",    # flake8-builtins
+    "ARG",  # unused arguments
+    "B",    # flake8-bugbear
+    "C4",   # comprehensions
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "PT",   # pytest style
+    "RET",  # return conventions
+    "RUF",  # ruff-specific
+    "SIM",  # simplify
+    "UP",   # pyupgrade
+    "W",    # pycodestyle warnings
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+files = ["taskflow_meter", "tests"]
+
+[[tool.mypy.overrides]]
+# None of these ship type information.
+module = ["taskflow.*", "oslo_cache.*", "oslo_config.*", "oslo_serialization.*", "oslo_utils.*", "stevedore.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["taskflow_meter._version"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+    "integration: exercises a real taskflow engine",
+]
+
+[tool.coverage.run]
+source = ["taskflow_meter"]
+branch = true
+omit = ["taskflow_meter/_version.py"]
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]
