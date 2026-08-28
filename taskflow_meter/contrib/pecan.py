@@ -41,6 +41,7 @@ from typing import Any
 import pecan
 from webob import Request
 
+from taskflow_meter.api.http import mount_prefix
 from taskflow_meter.api.wsgi import WSGIApp
 from taskflow_meter.conf import wsgi_app_from_config
 
@@ -79,11 +80,5 @@ def _split(path_info: str, remainder: tuple[str, ...]) -> tuple[str, str]:
     Pecan does not rewrite ``PATH_INFO`` as it routes, so the mount
     point has to be recovered by taking the remainder off the end.
     """
-    if not remainder:
-        return path_info.rstrip("/"), "/"
-    tail = "/" + "/".join(remainder)
-    if not path_info.endswith(tail):
-        # Should not happen, but guessing a prefix would produce links
-        # that point somewhere that does not exist.
-        return "", path_info
-    return path_info[: -len(tail)], tail
+    sub_path = "/" + "/".join(remainder) if remainder else "/"
+    return mount_prefix(path_info, sub_path), sub_path

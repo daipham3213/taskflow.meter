@@ -94,9 +94,20 @@ paste.app_factory = taskflow_meter.contrib.paste:app_factory
 connection = mysql+pymysql://user:password@host/taskflow
 ```
 
-For Pecan services, `taskflow_meter.contrib.pecan.MeterController` mounts into
-the controller tree. See [the guide](docs/guide.md) for both, and for how to
-read completion and current-task out of the API.
+Native adapters exist for the frameworks where the routes should live inside
+the host application rather than beside it, so its auth and middleware apply
+to them:
+
+| Host | Adapter |
+| --- | --- |
+| FastAPI | `contrib.fastapi.meter_router(meter)` |
+| Flask | `contrib.flask.meter_blueprint(meter)` |
+| Django | `contrib.django.meter_urlpatterns(meter)` |
+| Pecan | `contrib.pecan.MeterController()` |
+| paste | `contrib.paste:app_factory` |
+
+See [the guide](docs/guide.md) for all of them, and for how to read completion
+and current-task out of the API.
 
 ### Endpoints
 

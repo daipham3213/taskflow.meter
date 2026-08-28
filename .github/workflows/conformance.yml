@@ -1,0 +1,51 @@
+name: conformance
+
+# Every host framework must answer identically. This runs against the
+# frameworks' current releases rather than a pinned set, so a change in
+# any of them shows up here rather than in somebody's deployment.
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  schedule:
+    # Frameworks move without us; find out on a Monday, not from a bug.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: conformance-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  hosts:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # hatch-vcs derives the version from git history and tags.
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python }}
+      - name: Host and mount conformance
+        run: >
+          uv run --group dev
+          pytest tests/conformance -q
+          --cov=taskflow_meter.contrib
+          --cov=taskflow_meter.api
+          --cov-report=term-missing
+      - name: Report the framework versions the run used
+        if: always()
+        run: >
+          uv run --group dev python -c "
+          import importlib.metadata as m;
+          print('\n'.join(f'{n}=={m.version(n)}' for n in
+          ['fastapi','starlette','flask','django','pecan','WebOb']))"

@@ -29,7 +29,6 @@ minds the other having gone first.
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import logging
 from collections.abc import Awaitable
 from collections.abc import Callable
@@ -42,6 +41,7 @@ from taskflow_meter.api.http import MeterResponse
 from taskflow_meter.api.http import split_path
 from taskflow_meter.api.service import MeterService
 from taskflow_meter.api.sse import StreamResponse
+from taskflow_meter.api.sse import aiter_frames
 from taskflow_meter.meter import Meter
 
 LOG = logging.getLogger(__name__)
@@ -161,31 +161,14 @@ class ASGIApp:
         cursor = stream.cursor
         disconnected = asyncio.Event()
         watcher = asyncio.create_task(watch_disconnect(receive, disconnected))
-        quiet = 0.0
         try:
-            await send_chunk(send, cursor.opening())
-            while not disconnected.is_set():
-                frames = await asyncio.to_thread(cursor.poll)
-                for chunk in frames:
-                    # Re-checked per frame: a client that leaves partway
-                    # through a large batch should not have the rest of
-                    # it written at them.
-                    if disconnected.is_set():
-                        break
-                    await send_chunk(send, chunk)
-                if cursor.complete:
-                    break
-
-                quiet = 0.0 if frames else quiet + self.stream_interval
-                if quiet >= self.heartbeat:
-                    await send_chunk(send, cursor.heartbeat())
-                    quiet = 0.0
-
-                # Sleep, but wake immediately if the client leaves.
-                with contextlib.suppress(TimeoutError):
-                    await asyncio.wait_for(
-                        disconnected.wait(), self.stream_interval
-                    )
+            async for chunk in aiter_frames(
+                cursor,
+                interval=self.stream_interval,
+                heartbeat=self.heartbeat,
+                stop=disconnected,
+            ):
+                await send_chunk(send, chunk)
         finally:
             watcher.cancel()
             if not disconnected.is_set():

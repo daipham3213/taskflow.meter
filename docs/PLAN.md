@@ -125,6 +125,8 @@ taskflow_meter/
     fastapi.py                 # meter_router(meter) -> APIRouter
     flask.py                   # meter_blueprint(meter) -> Blueprint
     django.py                  # meter_urlpatterns(meter) -> [path(...)]
+    pecan.py                   # MeterController(): delegates to the WSGI app
+    paste.py                   # app_factory for an api-paste.ini pipeline
 
   cli.py                       # taskflow-meter serve | collect | tail | dump
 
@@ -411,7 +413,7 @@ Concurrency groups cancel superseded runs; `permissions:` blocks are minimal
 | M2 **(done)** | `datasource/persistence.py` + `poller.py` + `meter.py` lifecycle | Cross-process test: a flow runs in a subprocess against a sqlite logbook while the meter observes its states and per-atom progress from the parent |
 | M3 **(done)** | `api/` core: `service`, `http`, `routes`, `router`, `serializers`, `sse` + `api/asgi.py` | REST + SSE over a plain ASGI 3 callable, no web framework; mount-safe path handling tested against both Starlette conventions, and every link a payload emits is asserted to resolve to a real route |
 | M4 **(done)** | `api/wsgi.py`, plus `api/dispatch.py` shared by both callables, and `taskflow-meter serve` on stdlib wsgiref | Parity suite: both callables byte-identical across every shared route, verb, query and mount prefix -- including a whole SSE stream |
-| M5 **(partly done)** | `conf.py` (oslo.config), `contrib/paste.py` and `contrib/pecan.py`, `running_atoms`, `docs/guide.md` | Hosted in a real Pecan app and a paste stanza, configured from the service's own config file. FastAPI/Flask/Django adapters and the CI conformance matrix still outstanding |
+| M5 **(done)** | `conf.py` (oslo.config), `contrib/` for paste, Pecan, FastAPI, Flask and Django, `running_atoms`, `docs/guide.md`, `conformance.yml` | Every endpoint runs through all six hosts at three mount depths and returns identical bytes; every link a payload emits resolves to a real route under that host's own prefix |
 | M6 | `cache/` via oslo.cache + `oslo-config-generator` sample | Flow list served from cache; documented invalidation and TTL semantics (`conf.py` and the `poll = false` worker mode landed early, in M5) |
 | M7 | `collect/` (listener + progress tap + pipeline) + `transports/` memory & http | In-process attach gives sub-second latency and DAG topology |
 | M8 | `datasource/sqlalchemy` + alembic; `transports/amqp` | Multi-process collector deployment |

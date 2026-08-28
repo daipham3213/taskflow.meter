@@ -28,7 +28,6 @@ nothing while idle.
 from __future__ import annotations
 
 import logging
-import time
 from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Iterator
@@ -39,6 +38,7 @@ from taskflow_meter.api.dispatch import Dispatcher
 from taskflow_meter.api.http import MeterRequest
 from taskflow_meter.api.service import MeterService
 from taskflow_meter.api.sse import StreamResponse
+from taskflow_meter.api.sse import iter_frames
 from taskflow_meter.meter import Meter
 
 LOG = logging.getLogger(__name__)
@@ -91,29 +91,17 @@ class WSGIApp:
         return self._frames(stream)
 
     def _frames(self, stream: StreamResponse) -> Iterator[bytes]:
-        """Yield frames until the flow ends or the client goes away.
-
-        A generator, so that when the server closes the iterable the
-        ``GeneratorExit`` lands here and the loop stops rather than
-        polling a datasource nobody is listening to.
-        """
-        cursor = stream.cursor
-        quiet = 0.0
+        """Yield frames until the flow ends or the client goes away."""
         try:
-            yield cursor.opening()
-            while True:
-                frames = cursor.poll()
-                yield from frames
-                if cursor.complete:
-                    return
-
-                quiet = 0.0 if frames else quiet + self.stream_interval
-                if quiet >= self.heartbeat:
-                    yield cursor.heartbeat()
-                    quiet = 0.0
-                time.sleep(self.stream_interval)
+            yield from iter_frames(
+                stream.cursor,
+                interval=self.stream_interval,
+                heartbeat=self.heartbeat,
+            )
         except GeneratorExit:
-            LOG.debug("client closed the stream for run %s", cursor.run_id)
+            LOG.debug(
+                "client closed the stream for run %s", stream.cursor.run_id
+            )
             raise
 
 

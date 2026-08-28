@@ -104,12 +104,11 @@ def test_the_consumed_prefix_is_recovered_from_the_remainder(
 
 
 def test_a_remainder_that_does_not_fit_is_not_guessed_at() -> None:
-    # Guessing a prefix would produce links pointing somewhere that
-    # does not exist, which is worse than no prefix at all.
-    assert _split("/somewhere/else", ("api", "v1")) == (
-        "",
-        "/somewhere/else",
-    )
+    # The two can disagree when a segment's encoding differs between the
+    # raw path and the decoded remainder.  Route on what Pecan says is
+    # left for us, and report no prefix: guessing one would produce
+    # links pointing somewhere that does not exist.
+    assert _split("/somewhere/else", ("api", "v1")) == ("", "/api/v1")
 
 
 # -- through a real Pecan app --------------------------------------------

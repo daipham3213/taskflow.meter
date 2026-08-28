@@ -84,11 +84,14 @@ dev = [
     "SQLAlchemy-Utils>=0.41",
     "alembic>=1.13",
     # The hosts the contrib adapters are tested inside.  Test-only: a
-    # deployment hosting the meter in Pecan already has Pecan, so the
+    # deployment hosting the meter in Django already has Django, so the
     # adapters declare no runtime dependency of their own.
+    "Django>=4.2",
+    "Flask>=3.0",
     "PasteDeploy>=3.0",
     "WebOb>=1.8",
     "WebTest>=3.0",
+    "fastapi>=0.110",
     "pecan>=1.5",
 ]
 
@@ -168,7 +171,14 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 # The frameworks the contrib adapters plug into, none of which ship types.
-module = ["pecan.*", "webob.*", "webtest.*", "paste.*"]
+module = [
+    "django.*",
+    "flask.*",
+    "paste.*",
+    "pecan.*",
+    "webob.*",
+    "webtest.*",
+]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

@@ -89,6 +89,22 @@ def split_path(path: str, root_path: str) -> str:
     return path[len(root_path) :] or "/"
 
 
+def mount_prefix(full_path: str, sub_path: str) -> str:
+    """Return the part of ``full_path`` that precedes ``sub_path``.
+
+    How an adapter recovers where it was mounted when the host routed by
+    consuming path segments rather than by rewriting the path: the
+    difference between the two is the prefix.  Every generated link is
+    built from it, so guessing would produce links to nowhere -- hence
+    the empty string when the two do not line up.
+    """
+    if sub_path in ("", "/"):
+        return full_path.rstrip("/")
+    if not full_path.endswith(sub_path):
+        return ""
+    return full_path[: -len(sub_path)]
+
+
 @dataclass(frozen=True, slots=True)
 class MeterRequest:
     """One inbound request, reduced to what a handler needs."""

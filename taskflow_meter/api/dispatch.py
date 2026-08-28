@@ -30,6 +30,7 @@ from taskflow_meter.api.http import MeterResponse
 from taskflow_meter.api.http import MethodNotAllowedError
 from taskflow_meter.api.http import NotFoundError
 from taskflow_meter.api.router import Outcome
+from taskflow_meter.api.router import Route
 from taskflow_meter.api.router import Router
 from taskflow_meter.api.service import MeterService
 from taskflow_meter.api.sse import StreamResponse
@@ -58,6 +59,28 @@ class Dispatcher:
         except ApiError as error:
             return MeterResponse.from_error(error)
 
+    def run(self, route: Route, request: MeterRequest) -> Result:
+        """Invoke a handler the *host* has already matched.
+
+        The contrib adapters register our routes in the host's router,
+        so the host does the matching -- but a 404 for an unknown flow
+        is still ours to shape.  Without this each adapter would
+        re-implement the error rendering, and each would get it subtly
+        different.
+        """
+        try:
+            return self._invoke(route, request)
+        except ApiError as error:
+            return MeterResponse.from_error(error)
+
+    def _invoke(self, route: Route, request: MeterRequest) -> Result:
+        result: Result = route.handler(request)
+        if request.method == "HEAD" and isinstance(result, MeterResponse):
+            # Same headers, including content-length: a HEAD that
+            # reported zero would misdescribe the GET.
+            return replace(result, body=b"")
+        return result
+
     def _dispatch(self, request: MeterRequest) -> Result:
         if request.method == "OPTIONS":
             return self._options(request)
@@ -69,14 +92,9 @@ class Dispatcher:
 
         if match.outcome is Outcome.MATCHED:
             assert match.route is not None
-            result: Result = match.route.handler(
-                replace(request, path_params=match.params)
+            return self._invoke(
+                match.route, replace(request, path_params=match.params)
             )
-            if request.method == "HEAD" and isinstance(result, MeterResponse):
-                # Same headers, including content-length: a HEAD that
-                # reported zero would misdescribe the GET.
-                return replace(result, body=b"")
-            return result
 
         if match.outcome is Outcome.METHOD_NOT_ALLOWED:
             raise MethodNotAllowedError(

@@ -20,7 +20,12 @@ WSGI one from a thread without either owning the logic.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import json
+import time
+from collections.abc import AsyncIterator
+from collections.abc import Iterator
 from dataclasses import dataclass
 from dataclasses import field
 
@@ -152,3 +157,66 @@ class StreamResponse:
     cursor: EventCursor
     status: int = 200
     headers: tuple[tuple[str, str], ...] = SSE_HEADERS
+
+
+def iter_frames(
+    cursor: EventCursor,
+    *,
+    interval: float,
+    heartbeat: float,
+) -> Iterator[bytes]:
+    """Drive a cursor synchronously, for WSGI and its descendants.
+
+    A generator, so the server closing the iterable lands a
+    ``GeneratorExit`` here and the loop stops rather than polling a
+    datasource nobody is listening to.
+    """
+    quiet = 0.0
+    yield cursor.opening()
+    while True:
+        frames = cursor.poll()
+        yield from frames
+        if cursor.complete:
+            return
+        quiet = 0.0 if frames else quiet + interval
+        if quiet >= heartbeat:
+            yield cursor.heartbeat()
+            quiet = 0.0
+        time.sleep(interval)
+
+
+async def aiter_frames(
+    cursor: EventCursor,
+    *,
+    interval: float,
+    heartbeat: float,
+    stop: asyncio.Event | None = None,
+) -> AsyncIterator[bytes]:
+    """Drive a cursor from an event loop, for ASGI and its descendants.
+
+    The polling itself is handed to a thread: a datasource read is
+    blocking, and doing it inline would stall every other request the
+    loop is serving.
+    """
+    quiet = 0.0
+    yield cursor.opening()
+    while stop is None or not stop.is_set():
+        frames = await asyncio.to_thread(cursor.poll)
+        for chunk in frames:
+            if stop is not None and stop.is_set():
+                return
+            yield chunk
+        if cursor.complete:
+            return
+
+        quiet = 0.0 if frames else quiet + interval
+        if quiet >= heartbeat:
+            yield cursor.heartbeat()
+            quiet = 0.0
+
+        if stop is None:
+            await asyncio.sleep(interval)
+        else:
+            # Sleep, but wake immediately if the client leaves.
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(stop.wait(), interval)

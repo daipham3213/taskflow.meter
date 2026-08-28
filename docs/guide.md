@@ -100,6 +100,36 @@ sub-application bypasses the host's own hooks and middleware; if the host's
 auth must apply, wire the route table into its router instead --
 `taskflow_meter.api.routes.build_routes()` returns it as data.
 
+### Inside FastAPI, Flask, or Django
+
+Mounting the raw callable works in all three and needs nothing from this
+package. Reach for a native adapter when the routes need to be *inside* the
+host application, so its authentication, middleware and error handling apply
+to them -- and, for FastAPI, so they appear in its OpenAPI schema:
+
+```python
+from taskflow_meter.contrib.fastapi import meter_router
+
+app.include_router(
+    meter_router(meter),
+    prefix="/taskflow",
+    dependencies=[Depends(require_admin)],
+)
+
+from taskflow_meter.contrib.flask import meter_blueprint
+
+app.register_blueprint(meter_blueprint(meter), url_prefix="/taskflow")
+
+from taskflow_meter.contrib.django import meter_urlpatterns
+
+urlpatterns = [path("taskflow/", include(meter_urlpatterns(meter)))]
+```
+
+Each host is told where it lives differently -- an ASGI `root_path`, a WSGI
+`SCRIPT_NAME`, a router prefix, a `url_prefix`, an `include()` -- and all of
+them produce the same links. A conformance suite runs every endpoint through
+all six hosts at three mount depths and compares the bytes.
+
 ### Behind gunicorn, or standalone
 
 ```python
