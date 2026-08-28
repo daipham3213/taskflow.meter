@@ -45,6 +45,31 @@ application you already have:
 host.mount("/taskflow", ASGIApp(meter))  # Starlette / FastAPI
 ```
 
+There is a WSGI callable too, with identical behaviour -- a conformance suite
+compares the two byte for byte:
+
+```python
+from taskflow_meter.api.wsgi import WSGIApp
+
+application = WSGIApp(meter)  # gunicorn module:application
+
+app.wsgi_app = DispatcherMiddleware(  # Flask / werkzeug
+    app.wsgi_app, {"/taskflow": WSGIApp(meter)}
+)
+```
+
+Or serve it straight away, with no server dependency at all:
+
+```bash
+taskflow-meter serve --connection sqlite:///taskflow.db
+```
+
+That runs on `wsgiref` from the standard library and binds localhost. It is a
+development server -- put the WSGI callable behind gunicorn for anything real.
+One caveat for WSGI deployments: a synchronous worker holds a thread for as
+long as an SSE stream stays open, so use gevent or eventlet workers for
+streaming, or let clients poll `/events?since_seq=` instead.
+
 Mounted apps never receive the ASGI lifespan scope, so the meter also starts
 itself on the first request. If your host application has a lifespan of its
 own, prefer `meter.start()` / `meter.stop()` from it.

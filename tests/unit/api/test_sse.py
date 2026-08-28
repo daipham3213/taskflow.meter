@@ -61,6 +61,22 @@ def test_the_headers_defeat_proxy_buffering() -> None:
     assert headers["x-accel-buffering"] == "no"
 
 
+def test_no_hop_by_hop_headers_are_emitted() -> None:
+    # PEP 3333 forbids an application from sending these, and wsgiref
+    # refuses outright -- so one here breaks every WSGI deployment.
+    hop_by_hop = {
+        "connection",
+        "keep-alive",
+        "proxy-authenticate",
+        "proxy-authorization",
+        "te",
+        "trailer",
+        "transfer-encoding",
+        "upgrade",
+    }
+    assert not {name for name, _ in SSE_HEADERS} & hop_by_hop
+
+
 @pytest.fixture
 def store() -> MemoryDataSource:
     return MemoryDataSource()

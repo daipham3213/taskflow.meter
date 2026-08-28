@@ -155,7 +155,29 @@ def test_an_unknown_endpoint_under_our_prefix_is_ours_to_answer(
 def test_the_wrong_verb_gets_an_allow_header(app: ASGIApp) -> None:
     response = asgi_client.request(app, "/api/v1/flows", method="DELETE")
     assert response.status == 405
-    assert response.header("allow") == "GET"
+    assert response.header("allow") == "GET, HEAD, OPTIONS"
+
+
+def test_head_returns_the_headers_of_the_get_without_its_body(
+    app: ASGIApp,
+) -> None:
+    head = asgi_client.request(app, "/healthz", method="HEAD")
+    get = asgi_client.request(app, "/healthz")
+    assert head.status == 200
+    assert head.body == b""
+    # Reporting zero here would misdescribe the GET.
+    assert head.header("content-length") == get.header("content-length")
+
+
+def test_options_advertises_what_the_path_accepts(app: ASGIApp) -> None:
+    response = asgi_client.request(app, "/api/v1/flows", method="OPTIONS")
+    assert response.status == 204
+    assert response.header("allow") == "GET, HEAD, OPTIONS"
+
+
+def test_options_on_an_unknown_path_is_still_a_404(app: ASGIApp) -> None:
+    response = asgi_client.request(app, "/nope", method="OPTIONS")
+    assert response.status == 404
 
 
 def test_a_bad_query_value_is_a_json_400(app: ASGIApp) -> None:

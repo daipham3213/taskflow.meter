@@ -34,18 +34,12 @@ import logging
 from collections.abc import Awaitable
 from collections.abc import Callable
 from collections.abc import Iterable
-from dataclasses import replace
 from typing import Any
 
-from taskflow_meter.api import routes as route_table
-from taskflow_meter.api.http import ApiError
+from taskflow_meter.api.dispatch import Dispatcher
 from taskflow_meter.api.http import MeterRequest
 from taskflow_meter.api.http import MeterResponse
-from taskflow_meter.api.http import MethodNotAllowedError
-from taskflow_meter.api.http import NotFoundError
 from taskflow_meter.api.http import split_path
-from taskflow_meter.api.router import Outcome
-from taskflow_meter.api.router import Router
 from taskflow_meter.api.service import MeterService
 from taskflow_meter.api.sse import StreamResponse
 from taskflow_meter.meter import Meter
@@ -79,7 +73,7 @@ class ASGIApp:
     ) -> None:
         self.meter = meter
         self.service = service or MeterService(meter)
-        self.router = Router(route_table.build_routes(self.service))
+        self.dispatcher = Dispatcher(self.service)
         self.stream_interval = stream_interval
         self.heartbeat = heartbeat
 
@@ -145,35 +139,12 @@ class ASGIApp:
         await asyncio.to_thread(self.meter.ensure_started)
 
         request = build_request(scope)
-        try:
-            handler, params = self._resolve(request)
-            result = await asyncio.to_thread(
-                handler, replace_params(request, params)
-            )
-        except ApiError as error:
-            await send_response(send, MeterResponse.from_error(error))
-            return
+        result = await asyncio.to_thread(self.dispatcher.dispatch, request)
 
         if isinstance(result, StreamResponse):
             await self._stream(result, receive, send)
             return
         await send_response(send, result)
-
-    def _resolve(self, request: MeterRequest) -> tuple[Any, dict[str, str]]:
-        match = self.router.match(request.method, request.path)
-        if match.outcome is Outcome.MATCHED:
-            assert match.route is not None
-            return match.route.handler, match.params
-        if match.outcome is Outcome.METHOD_NOT_ALLOWED:
-            allowed = ", ".join(match.allowed)
-            raise MethodNotAllowedError(
-                f"{request.method} is not allowed here",
-                headers=(("allow", allowed),),
-            )
-        # Unknown paths under our prefix are ours to answer.  Raising
-        # into the host application would turn a wrong URL into someone
-        # else's 500.
-        raise NotFoundError(f"no such endpoint: {request.path}")
 
     # -- streaming -------------------------------------------------------
 
@@ -280,9 +251,3 @@ def build_request(scope: Scope) -> MeterRequest:
         prefix=headers.get(PREFIX_HEADER, "") + root_path,
         headers=headers,
     )
-
-
-def replace_params(
-    request: MeterRequest, params: dict[str, str]
-) -> MeterRequest:
-    return replace(request, path_params=params)

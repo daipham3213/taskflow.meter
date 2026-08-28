@@ -28,10 +28,13 @@ from taskflow_meter.api import serializers
 from taskflow_meter.datasource.base import DataSource
 from taskflow_meter.events import Event
 
+#: Note the absence of ``connection: keep-alive``.  It is a hop-by-hop
+#: header, which PEP 3333 forbids an application from emitting -- and
+#: wsgiref rightly refuses to send.  Connection persistence is the
+#: server's business, not ours.
 SSE_HEADERS: tuple[tuple[str, str], ...] = (
     ("content-type", "text/event-stream; charset=utf-8"),
     ("cache-control", "no-cache"),
-    ("connection", "keep-alive"),
     # nginx buffers proxied responses by default, which turns a live
     # stream into one long silence followed by everything at once.
     ("x-accel-buffering", "no"),

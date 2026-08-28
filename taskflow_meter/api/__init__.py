@@ -21,6 +21,7 @@ from taskflow_meter.api.http import MeterResponse
 from taskflow_meter.api.router import Route
 from taskflow_meter.api.router import Router
 from taskflow_meter.api.service import MeterService
+from taskflow_meter.api.wsgi import WSGIApp
 
 __all__ = [
     "ASGIApp",
@@ -30,4 +31,5 @@ __all__ = [
     "MeterService",
     "Route",
     "Router",
+    "WSGIApp",
 ]
