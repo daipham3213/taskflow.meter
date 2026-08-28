@@ -84,7 +84,11 @@ def flow(
         "atom_count": len(snapshot.atoms),
         # What it is doing right now: a list, because parallel flows run
         # several at once and a flow between atoms is running none.
-        "running_atoms": [atom.name for atom in snapshot.running_atoms],
+        #
+        # Not named `atom`: this module has a function by that name, and
+        # under PEP 709 comprehension inlining (broken in CPython 3.12.0
+        # and 3.12.1) the loop target shadows it for the whole function.
+        "running_atoms": [running.name for running in snapshot.running_atoms],
         "state_counts": snapshot.state_counts,
         "meta": snapshot.meta,
         "links": links,
