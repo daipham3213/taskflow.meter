@@ -1,0 +1,62 @@
+# Configuration file for `prek`, a git hook framework written in Rust.
+# See https://prek.j178.dev for more information.
+#:schema https://www.schemastore.org/prek.json
+
+[[repos]]
+repo = "https://github.com/astral-sh/ruff-pre-commit"
+rev = "v0.15.22"
+hooks = [
+  {
+    id = "ruff-check",
+    types_or = [
+      "python",
+      "pyi"
+    ],
+    args = ["--fix"]
+  },
+  {
+    id = "ruff-format",
+    types_or = [
+      "python",
+      "pyi"
+    ]
+  }
+]
+
+[[repos]]
+repo = "https://github.com/pre-commit/pre-commit-hooks"
+rev = "v6.0.0"
+hooks = [
+  { id = "trailing-whitespace" },
+  {
+    id = "mixed-line-ending",
+    args = [
+      "--fix",
+      "lf"
+    ]
+  },
+  { id = "fix-byte-order-marker" },
+  { id = "check-executables-have-shebangs" },
+  { id = "check-merge-conflict" },
+  { id = "debug-statements" },
+  {
+    id = "check-json",
+    files = '.*\.json$'
+  },
+  {
+    id = "check-yaml",
+    files = '.*\.(yaml|yml)$'
+  }
+]
+
+[[repos]]
+repo = "https://opendev.org/openstack/hacking"
+rev = "8.1.0"
+hooks = [
+  {
+    id = "hacking",
+    additional_dependencies = [
+    ],
+    exclude = "^(doc|releasenotes|tools)/.*$"
+  }
+]

@@ -129,12 +129,15 @@ taskflow_meter/
   cli.py                       # taskflow-meter serve | collect | tail | dump
 
 tests/
-  unit/                        # events, diff, router, serializers, cache
+  unit/                        # mirrors the package: tests/unit/<pkg>/test_<mod>.py
+    datasource/                #   for taskflow_meter/<pkg>/<mod>.py
+    api/
   integration/                 # real engines (linear/graph/unordered, serial/parallel)
-  functional/                  # ASGI+WSGI over a live sqlite-backed flow
+  functional/                  # ASGI+WSGI over a live sqlite-backed flow; packaging
   conformance/                 # same suite through every host framework + mount prefix
   conftest.py                  # engine fixtures, ProgressingTask, sqlite logbook
-docs/  .github/workflows/
+tools/check_test_layout.py     # enforces the mirror; run by tox -e pep8
+docs/  .github/workflows/  tox.ini
 ```
 
 ## 5. Event model
@@ -391,6 +394,12 @@ Concurrency groups cancel superseded runs; `permissions:` blocks are minimal
   return byte-identical JSON for the shared routes, and every generated link
   must resolve back to a real route under that prefix. A regression here means
   we silently broke somebody's deployment.
+- **Unit tests mirror the package.** `taskflow_meter/<pkg>/<mod>.py` is
+  tested by `tests/unit/<pkg>/test_<mod>.py`; anything that does not target a
+  single module lives in `tests/functional`, `tests/integration` or
+  `tests/conformance`. `tools/check_test_layout.py` enforces this and runs in
+  `tox -e pep8` and in CI, because a convention nothing checks is a
+  convention that decays.
 - No external services required for the default `pytest` run.
 
 ## 11. Milestones

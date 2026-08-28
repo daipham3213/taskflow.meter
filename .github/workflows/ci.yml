@@ -30,6 +30,8 @@ jobs:
         run: uv run --group dev ruff format --check --diff .
       - name: mypy
         run: uv run --group dev mypy
+      - name: Test tree mirrors the package
+        run: uv run --group dev python tools/check_test_layout.py
 
   test:
     runs-on: ubuntu-latest

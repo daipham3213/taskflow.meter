@@ -13,6 +13,7 @@ wheels/
 taskflow_meter/_version.py
 
 # Tooling caches and reports
+.tox/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/

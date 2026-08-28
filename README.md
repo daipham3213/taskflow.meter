@@ -43,8 +43,30 @@ uv run --group dev mypy            # type check
 uv build                           # build sdist + wheel
 ```
 
+`tox` is available too, and is what CI reproduces:
+
+```bash
+uvx tox -e pep8          # lint, types, and the test-tree check
+uvx tox -e py312         # tests on one interpreter
+uvx tox                  # the whole matrix
+```
+
 Because the version is derived from git history, a shallow clone or a checkout
 with no tags will build as `0.0.0`. CI checks out with full history.
+
+### Where tests go
+
+A unit test module mirrors the module it targets, so finding the tests for a
+file is mechanical rather than a search:
+
+| Module | Its tests |
+| --- | --- |
+| `taskflow_meter/diff.py` | `tests/unit/test_diff.py` |
+| `taskflow_meter/datasource/memory.py` | `tests/unit/datasource/test_memory.py` |
+
+Tests that do not target a single module go in a sibling tree instead --
+`tests/functional/`, `tests/integration/` or `tests/conformance/`. Anything
+misplaced fails `tox -e pep8`.
 
 ## License
 
