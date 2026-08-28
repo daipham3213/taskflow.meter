@@ -59,6 +59,7 @@ Changelog = "https://github.com/daipham3213/taskflow-meter/releases"
 # module that does not exist yet breaks discovery for the whole group.
 [project.entry-points."taskflow_meter.datasource"]
 memory = "taskflow_meter.datasource.memory:MemoryDataSource"
+persistence = "taskflow_meter.datasource.persistence:PersistenceDataSource"
 
 [dependency-groups]
 dev = [
@@ -67,6 +68,12 @@ dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "ruff>=0.6",
+    # taskflow's sqlite persistence backend, which the persistence
+    # datasource is tested against.  SQLAlchemy-Utils is its requirement,
+    # not ours.
+    "SQLAlchemy>=2.0",
+    "SQLAlchemy-Utils>=0.41",
+    "alembic>=1.13",
 ]
 
 [tool.hatch.version]
@@ -129,6 +136,10 @@ python_version = "3.11"
 strict = true
 warn_unreachable = true
 files = ["taskflow_meter", "tests", "tools"]
+# taskflow ships no type information, and this package exists to extend
+# its classes -- listeners, tasks in the test suite.  Refusing to subclass
+# Any would mean giving up on typing the modules that do it.
+disallow_subclassing_any = false
 
 [[tool.mypy.overrides]]
 # None of these ship type information.
@@ -138,6 +149,14 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["taskflow_meter._version"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# mypy narrows a property like `meter.running` at the first assert and
+# does not widen it again after the call that changes it, so a test that
+# asserts a lifecycle both ways reads as unreachable.  The production
+# code keeps the check.
+module = ["tests.*"]
+warn_unreachable = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

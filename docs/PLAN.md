@@ -64,7 +64,7 @@ a whole rendered page), never by scanning cache keys.
  EMIT SIDE (optional, in the app running the flow)   SERVE SIDE (monitoring)
  ─────────────────────────────────────────────────┬──────────────────────────
   collect/                                        │  datasource/
-    MeterListener   -> flow + atom state          │    taskflow_persistence  <-- primary
+    MeterListener   -> flow + atom state          │    persistence           <-- primary
     ProgressTap     -> atom's own task.notifier   │    memory
     PollingSampler  -> engine.storage gap-fill    │    sqlalchemy (own schema)
           |                                       │        ^
@@ -104,7 +104,7 @@ taskflow_meter/
 
   datasource/
     base.py                    # apply/get_flow/list_flows/get_atoms/events_since
-    taskflow_persistence.py    # read-only over LogBook/FlowDetail/AtomDetail
+    persistence.py             # read-only over LogBook/FlowDetail/AtomDetail
     memory.py
     sqlalchemy/                # own schema + alembic; extra = "sqlalchemy"
     cached.py                  # oslo.cache decorator wrapping any datasource
@@ -329,7 +329,7 @@ all         = [...]
 taskflow-meter = "taskflow_meter.cli:main"
 
 [project.entry-points."taskflow_meter.datasource"]
-persistence = "taskflow_meter.datasource.taskflow_persistence:PersistenceDataSource"
+persistence = "taskflow_meter.datasource.persistence:PersistenceDataSource"
 memory      = "taskflow_meter.datasource.memory:MemoryDataSource"
 sqlalchemy  = "taskflow_meter.datasource.sqlalchemy:SQLADataSource"
 
@@ -408,7 +408,7 @@ Concurrency groups cancel superseded runs; `permissions:` blocks are minimal
 | --- | --- | --- |
 | M0 **(done)** | Swap `uv_build` -> hatchling + hatch-vcs; ruff, mypy, `ci.yml`, `release.yml`, Apache-2.0, README | Lint, types, tests and build all green locally; wheel ships `py.typed` + a git-derived version |
 | M1 **(done)** | `states.py`, `events.py`, `models.py`, `diff.py`, `datasource/base.py` + `memory` | Diff engine fully unit-tested; 100% branch coverage on every module in this milestone |
-| M2 | `datasource/taskflow_persistence.py` + poller + `meter.py` lifecycle | Run a flow with a sqlite logbook in one process, observe full state + progress history from another |
+| M2 **(done)** | `datasource/persistence.py` + `poller.py` + `meter.py` lifecycle | Cross-process test: a flow runs in a subprocess against a sqlite logbook while the meter observes its states and per-atom progress from the parent |
 | M3 | `api/` core: `service`, `http`, `routes`, `router`, `serializers`, `sse` + `api/asgi.py` | REST + SSE standalone; mount-safe path handling unit-tested against both Starlette conventions |
 | M4 | `api/wsgi.py` | Shared routes byte-identical between the two callables |
 | M5 | `contrib/` adapters + `conformance.yml` matrix | Identical behaviour mounted in FastAPI, Flask and Django at `/` and at a deep prefix |

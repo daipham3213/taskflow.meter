@@ -80,6 +80,13 @@ class DataSource(abc.ABC):
     #: Stevedore plugin name, set by subclasses.
     name: str = ""
 
+    #: Whether :meth:`events_since` can actually return a history.  A
+    #: source reading a store that only keeps current state sets this
+    #: False, so an API can decline to advertise a stream it cannot serve
+    #: rather than handing clients an empty one that is indistinguishable
+    #: from silence.
+    supports_events: bool = True
+
     def start(self) -> None:  # noqa: B027 - optional hook, not abstract
         """Acquire whatever the source needs.  Idempotent.
 

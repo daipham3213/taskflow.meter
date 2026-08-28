@@ -136,6 +136,13 @@ def test_an_empty_event_page_is_not_truncated() -> None:
     assert not page.truncated
 
 
+def test_a_source_offers_events_unless_it_says_otherwise() -> None:
+    # The persistence source overrides this to False, so an API can
+    # decline to advertise a stream that would only ever be empty.
+    assert DataSource.supports_events is True
+    assert StubSource().supports_events is True
+
+
 def test_an_unknown_marker_is_a_lookup_error() -> None:
     # So callers can catch it with the stdlib exception if they prefer.
     assert issubclass(UnknownMarkerError, LookupError)

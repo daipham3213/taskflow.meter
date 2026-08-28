@@ -43,6 +43,6 @@ def test_declared_datasource_plugins_all_resolve() -> None:
     from taskflow_meter.datasource.base import DataSource
 
     found = entry_points(group="taskflow_meter.datasource")
-    assert {ep.name for ep in found} == {"memory"}
+    assert {ep.name for ep in found} == {"memory", "persistence"}
     for entry_point in found:
         assert issubclass(entry_point.load(), DataSource)

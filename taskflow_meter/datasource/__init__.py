@@ -20,12 +20,14 @@ from taskflow_meter.datasource.base import FlowPage
 from taskflow_meter.datasource.base import UnknownMarkerError
 from taskflow_meter.datasource.base import WritableDataSource
 from taskflow_meter.datasource.memory import MemoryDataSource
+from taskflow_meter.datasource.persistence import PersistenceDataSource
 
 __all__ = [
     "DataSource",
     "EventPage",
     "FlowPage",
     "MemoryDataSource",
+    "PersistenceDataSource",
     "UnknownMarkerError",
     "WritableDataSource",
 ]
