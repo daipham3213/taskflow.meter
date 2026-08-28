@@ -4,9 +4,9 @@ Monitoring interfaces — ASGI, WSGI, datasources, transports — for observing
 [OpenStack TaskFlow](https://opendev.org/openstack/taskflow) flow execution
 progress.
 
-> **Status: pre-alpha.** The packaging, tooling and CI skeleton are in place
-> (milestone M0). The design is specified in [`docs/PLAN.md`](docs/PLAN.md);
-> functionality lands milestone by milestone against it.
+```bash
+pip install taskflow-meter
+```
 
 ## What it is for
 
@@ -183,6 +183,15 @@ The contrib adapters declare no dependency on their hosts -- a deployment
 mounting the meter in Django already has Django. They are tested against
 Django 3.2, Flask 2.3.3, FastAPI 0.100, Pecan 1.4 and PasteDeploy 2.0.
 
+## Documentation
+
+| | |
+| --- | --- |
+| [`docs/guide.md`](docs/guide.md) | Deploying it: configuration, every host, and how to read completion and current-task out of the API |
+| [`docs/design.md`](docs/design.md) | How it works and why -- what taskflow does and does not record, and the rules the embedding code obeys |
+| [`docs/releasing.md`](docs/releasing.md) | Cutting a release |
+| [`CHANGELOG.md`](CHANGELOG.md) | What changed |
+
 ## Examples
 
 Runnable, and covered by the test suite so they cannot rot:
@@ -208,6 +217,15 @@ uv build                           # build sdist + wheel
 uvx tox -e pep8          # ruff, hacking, mypy, and the test-tree check
 uvx tox -e py312         # tests on one interpreter
 uvx tox                  # the whole matrix
+```
+
+CI also runs the suite with every declared dependency floor installed exactly,
+which is the only job that checks those floors are real. To reproduce it:
+
+```bash
+uv lock --python 3.11 --resolution lowest-direct
+uv sync --python 3.11 --group dev --all-extras --resolution lowest-direct
+uv run --frozen --no-sync pytest
 ```
 
 Because the version is derived from git history, a shallow clone or a checkout

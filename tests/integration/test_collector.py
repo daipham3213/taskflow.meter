@@ -12,7 +12,7 @@
 
 """The collector deployment, end to end.
 
-M8's exit criterion. A flow publishes to a broker, a collector consumes
+A flow publishes to a broker, a collector consumes
 and writes to the meter's own database, and an API worker serves that
 store without polling anything -- each of them a component that would
 be its own process in a real deployment.

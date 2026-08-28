@@ -4,6 +4,9 @@ How to deploy it into an OpenStack service, and how to answer the two
 questions people actually have: *how far along is this flow?* and *what is it
 doing right now?*
 
+For why it is built the way it is -- what taskflow does and does not record,
+and the rules an embedded app has to obey -- see [design.md](design.md).
+
 ---
 
 ## 1. Point it at a taskflow backend
@@ -230,7 +233,7 @@ store.prune(before=time.time() - 30 * 86400)
 
 ---
 
-## 3b. Watching from inside the process running the flow
+## 4. Watching from inside the process running the flow
 
 Everything above reads what taskflow persisted. If you control the code that
 runs the flow, attaching to the engine gets you two things reading cannot:
@@ -277,7 +280,7 @@ without limit would take the process down later for reasons nobody would
 connect back to monitoring. A publisher that raises is counted and logged,
 and the next batch is still attempted. None of it can fail a task.
 
-## 4. How far along is this flow?
+## 5. How far along is this flow?
 
 Every flow payload carries a `completion` between 0 and 1:
 
@@ -346,7 +349,7 @@ another process within one poll interval.
 
 ---
 
-## 5. What is it doing right now?
+## 6. What is it doing right now?
 
 `running_atoms` names the atoms currently executing. It is a list because
 unordered and graph flows run several at once, and it is empty between two
@@ -410,7 +413,7 @@ Two events are not flow activity and are worth handling:
 
 ---
 
-## 6. What the meter cannot tell you
+## 7. What the meter cannot tell you
 
 Worth knowing before you go looking for it:
 

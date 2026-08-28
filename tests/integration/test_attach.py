@@ -12,7 +12,7 @@
 
 """Attaching to real engines, including the parallel one.
 
-M7's exit criterion. Two things the read-only path cannot offer, proven
+Two things the read-only path cannot offer, proven
 here against engines actually running: progress visible in well under a
 second rather than a poll interval later, and the flow's graph, which
 taskflow never persists.

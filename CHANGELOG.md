@@ -5,6 +5,21 @@ entry lands here in the release it ships in.
 
 ## Unreleased
 
+### Documentation
+
+- **`docs/PLAN.md` is gone.** It was a pre-build plan, and by 1.0 it was
+  describing a package that no longer matched it -- milestones, a packaging
+  sketch superseded by the real one, and an ASGI design (`meter.lifespan`,
+  `run_in_executor`, WebSocket support) that is not what shipped.
+- **`docs/design.md` replaces it** with the parts that were worth keeping and
+  are still true, re-verified against the code and against taskflow rather
+  than transcribed: what taskflow does and does not record and what follows
+  from it, the decisions and what each one costs, the rule that the emit side
+  can never hurt the flow, and the mount-safety, lifecycle and good-citizen
+  rules an embedded app has to obey.
+- The README no longer claims to be pre-alpha at milestone M0, and now has a
+  documentation index. The guide's sections are numbered in sequence.
+
 ### An oslo.messaging transport
 
 Events can now go out on the notification bus an OpenStack service is

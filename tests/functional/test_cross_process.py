@@ -12,7 +12,7 @@
 
 """Observe a flow running in a different process.
 
-The milestone this project is built around: a flow runs in one process
+The thing this package exists to do: a flow runs in one process
 against a sqlite logbook, and a meter in another process watches its
 state and its per-atom progress without the flow knowing anything about
 it.  Nothing here imports the flow's code or touches its engine.
