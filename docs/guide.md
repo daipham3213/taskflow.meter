@@ -155,6 +155,53 @@ endpoints report 501 rather than serving an empty stream.
 
 ---
 
+## 3b. Watching from inside the process running the flow
+
+Everything above reads what taskflow persisted. If you control the code that
+runs the flow, attaching to the engine gets you two things reading cannot:
+
+```python
+from taskflow_meter.collect import attach
+from taskflow_meter.meter import Meter
+
+with attach(engine) as watched:
+    engine.run()
+    meter = Meter(watched.store, poll=False)  # serve it however you like
+```
+
+**Latency.** A poller's floor is its interval -- seconds, by default. Attached,
+a number a task reports is readable in single-digit milliseconds.
+
+**The graph.** taskflow persists atoms but not the edges between them, so the
+shape of a flow only exists in the process that compiled it. `attach` emits it
+once, before anything runs, as a `flow_structure` event:
+
+```json
+{
+  "nodes": [{"name": "first", "kind": "task"}, ...],
+  "edges": [{"from": "first", "to": "second"}, ...],
+  "atom_count": 3
+}
+```
+
+Events can also go somewhere else at the same time:
+
+```python
+from taskflow_meter.transports.http import HTTPTransport
+
+with attach(engine, publishers=[HTTPTransport("https://collector/events")]):
+    engine.run()
+```
+
+### What attaching costs the flow
+
+Nothing it can help: delivery happens on its own thread behind a bounded
+queue, so a task never waits on a publisher. A full queue drops the oldest
+events, counts them and logs -- blocking would stall the flow, and growing
+without limit would take the process down later for reasons nobody would
+connect back to monitoring. A publisher that raises is counted and logged,
+and the next batch is still attempted. None of it can fail a task.
+
 ## 4. How far along is this flow?
 
 Every flow payload carries a `completion` between 0 and 1:

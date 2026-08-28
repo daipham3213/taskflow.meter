@@ -63,3 +63,14 @@ def test_the_config_generator_hook_is_discoverable() -> None:
     ((group, options),) = found.load()()
     assert group.name == "taskflow_meter"
     assert options
+
+
+def test_declared_transports_all_resolve() -> None:
+    from importlib.metadata import entry_points
+
+    from taskflow_meter.transports.base import Publisher
+
+    found = entry_points(group="taskflow_meter.transport")
+    assert {ep.name for ep in found} == {"memory", "datasource", "http"}
+    for entry_point in found:
+        assert issubclass(entry_point.load(), Publisher)

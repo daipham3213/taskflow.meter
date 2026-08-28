@@ -61,6 +61,11 @@ Changelog = "https://github.com/daipham3213/taskflow-meter/releases"
 memory = "taskflow_meter.datasource.memory:MemoryDataSource"
 persistence = "taskflow_meter.datasource.persistence:PersistenceDataSource"
 
+[project.entry-points."taskflow_meter.transport"]
+memory = "taskflow_meter.transports.memory:MemoryTransport"
+datasource = "taskflow_meter.transports.memory:DataSourcePublisher"
+http = "taskflow_meter.transports.http:HTTPTransport"
+
 # Lets a paste pipeline use `use = egg:taskflow-meter#meter`.
 [project.entry-points."paste.app_factory"]
 meter = "taskflow_meter.contrib.paste:app_factory"

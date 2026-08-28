@@ -185,6 +185,15 @@ class MemoryDataSource(WritableDataSource):
         since_seq: int = 0,
         limit: int = DEFAULT_EVENT_LIMIT,
     ) -> EventPage:
+        """Return the contiguous run of events after ``since_seq``.
+
+        Contiguous, and in sequence order, because concurrent producers
+        do not arrive in it: two threads under the parallel engine each
+        allocate a number and then enqueue, and the enqueues can
+        invert.  Returning event 8 while 7 is still in flight would
+        advance the caller past 7 for good, so anything beyond a gap is
+        held back until the gap fills.
+        """
         if limit < 1:
             msg = "limit must be at least 1"
             raise ValueError(msg)
@@ -193,21 +202,33 @@ class MemoryDataSource(WritableDataSource):
             run = self._runs.get(run_id)
             if run is None:
                 return EventPage(next_seq=since_seq)
+            stored = sorted(run.events, key=lambda event: event.seq)
 
-            selected = tuple(
-                event for event in run.events if event.seq > since_seq
-            )[:limit]
-            oldest = run.oldest_seq
-            # A hole exists when the caller's next expected event has
-            # already been evicted.
-            truncated = oldest is not None and since_seq + 1 < oldest
-            next_seq = selected[-1].seq if selected else since_seq
-            return EventPage(
-                events=selected,
-                next_seq=next_seq,
-                oldest_seq=oldest,
-                truncated=truncated,
-            )
+        oldest = stored[0].seq if stored else None
+        # A hole exists when the caller's next expected event has
+        # already been evicted.
+        truncated = oldest is not None and since_seq + 1 < oldest
+        expected = (
+            oldest if truncated and oldest is not None else since_seq + 1
+        )
+
+        selected: list[Event] = []
+        for event in stored:
+            if event.seq < expected:
+                continue
+            if event.seq != expected:
+                break
+            selected.append(event)
+            expected += 1
+            if len(selected) >= limit:
+                break
+
+        return EventPage(
+            events=tuple(selected),
+            next_seq=selected[-1].seq if selected else since_seq,
+            oldest_seq=oldest,
+            truncated=truncated,
+        )
 
 
 def _detach(flow: FlowSnapshot) -> FlowSnapshot:

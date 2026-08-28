@@ -109,6 +109,25 @@ to them:
 See [the guide](docs/guide.md) for all of them, and for how to read completion
 and current-task out of the API.
 
+### Watching from inside the process running the flow
+
+If you control the code that runs the flow, attaching to the engine gets you
+what reading persistence cannot: progress readable in single-digit
+milliseconds instead of a poll interval, and the flow's graph, which taskflow
+never persists.
+
+```python
+from taskflow_meter.collect import attach
+
+with attach(engine) as watched:
+    engine.run()
+    meter = Meter(watched.store, poll=False)
+```
+
+Delivery happens on its own thread behind a bounded queue, so a task never
+waits on a publisher, and no failure downstream -- a broken webhook, a full
+queue, a publisher that raises -- can fail a task.
+
 ### Endpoints
 
 | Path | What it returns |

@@ -317,6 +317,47 @@ def test_an_exhausted_stream_reports_the_caller_position() -> None:
     assert page.next_seq == 2
 
 
+def test_events_arriving_out_of_order_are_returned_in_order() -> None:
+    # Concurrent producers do not arrive in sequence order: two threads
+    # each allocate a number and then enqueue, and the enqueues invert.
+    source = MemoryDataSource()
+    for seq in (1, 3, 2):
+        source.apply(
+            Event(
+                run_id="run-1",
+                seq=seq,
+                ts=float(seq),
+                kind=EventKind.HEARTBEAT,
+            )
+        )
+    page = source.events_since("run-1")
+    assert [event.seq for event in page.events] == [1, 2, 3]
+
+
+def test_events_beyond_a_gap_are_held_back() -> None:
+    # Returning 3 while 2 is still in flight would advance the caller
+    # past 2 for good.
+    source = MemoryDataSource()
+    for seq in (1, 3):
+        source.apply(
+            Event(
+                run_id="run-1",
+                seq=seq,
+                ts=float(seq),
+                kind=EventKind.HEARTBEAT,
+            )
+        )
+    page = source.events_since("run-1")
+    assert [event.seq for event in page.events] == [1]
+    assert page.next_seq == 1
+
+    source.apply(
+        Event(run_id="run-1", seq=2, ts=2.0, kind=EventKind.HEARTBEAT)
+    )
+    page = source.events_since("run-1", since_seq=1)
+    assert [event.seq for event in page.events] == [2, 3]
+
+
 def test_eviction_is_reported_rather_than_hidden() -> None:
     # A caller that misses the window has a hole in its stream and needs
     # to know, or it will render a flow that silently skipped a state.
