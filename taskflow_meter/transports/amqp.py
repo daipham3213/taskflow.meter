@@ -33,6 +33,8 @@ import kombu
 from taskflow_meter.events import Event
 from taskflow_meter.transports.base import Publisher
 from taskflow_meter.transports.base import Subscriber
+from taskflow_meter.transports.base import from_payload
+from taskflow_meter.transports.base import to_payload
 
 LOG = logging.getLogger(__name__)
 
@@ -100,7 +102,7 @@ class AMQPTransport(Publisher):
             self._connection = None
 
     def publish(self, events: Sequence[Event]) -> None:
-        payload = {"events": [event.to_dict() for event in events]}
+        payload = to_payload(events)
         producer = self.connection.Producer(serializer="json")
         producer.publish(
             payload,
@@ -201,4 +203,4 @@ def _decode(body: Any) -> list[Event]:
         import json
 
         body = json.loads(body)
-    return [Event.from_dict(item) for item in body["events"]]
+    return from_payload(body)

@@ -12,10 +12,10 @@
 
 """The two callables must answer identically, byte for byte.
 
-M4's whole point.  Both adapters wrap the same service through the same
-dispatcher, so a difference here means one of them grew logic of its
-own -- which is exactly how two adapters drift until the less-tested one
-is quietly wrong.
+That is the whole point of shipping both.  Both adapters wrap the same
+service through the same dispatcher, so a difference here means one of
+them grew logic of its own -- which is exactly how two adapters drift
+until the less-tested one is quietly wrong.
 
 Lives outside the mirrored unit tree because its subject is the pair,
 not either module.

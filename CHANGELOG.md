@@ -5,7 +5,96 @@ entry lands here in the release it ships in.
 
 ## Unreleased
 
-Nothing yet.
+### Documentation
+
+- **`docs/PLAN.md` is gone.** It was a pre-build plan, and by 1.0 it was
+  describing a package that no longer matched it -- milestones, a packaging
+  sketch superseded by the real one, and an ASGI design (`meter.lifespan`,
+  `run_in_executor`, WebSocket support) that is not what shipped.
+- **`docs/design.md` replaces it** with the parts that were worth keeping and
+  are still true, re-verified against the code and against taskflow rather
+  than transcribed: what taskflow does and does not record and what follows
+  from it, the decisions and what each one costs, the rule that the emit side
+  can never hurt the flow, and the mount-safety, lifecycle and good-citizen
+  rules an embedded app has to obey.
+- The README no longer claims to be pre-alpha at milestone M0, and now has a
+  documentation index. The guide's sections are numbered in sequence.
+
+### An oslo.messaging transport
+
+Events can now go out on the notification bus an OpenStack service is
+already configured for, instead of over a broker connection of the meter's
+own. The operator's existing `transport_url` and
+`[oslo_messaging_notifications]` settings apply unchanged, whichever driver
+they chose is the one used, and the events land beside everything else the
+deployment already collects.
+
+```bash
+taskflow-meter collect --transport oslo-messaging \
+  --url rabbit://guest@broker// --store-url postgresql://host/meter
+```
+
+```python
+from taskflow_meter.transports.oslo_messaging import OsloMessagingTransport
+
+publisher = OsloMessagingTransport(conf=CONF)  # no URL: the service decides
+```
+
+- **Notifications, not RPC.** RPC is a call with a reply and a server
+  expected to be listening; a flow reporting progress wants neither.
+- **`collect` grew `--transport`**, defaulting to `amqp`. Its `--amqp-url`
+  is now spelled `--url`; the old name still works, so collectors deployed
+  against 1.0.0 keep running.
+- The wire envelope is shared with the AMQP transport, so a collector parses
+  the same thing either way.
+- New extra: `taskflow-meter[oslo-messaging]`, floor **oslo.messaging 6.0.0**
+  (5.0.0 fails the suite), found the same way as every other floor.
+
+**Pick this one knowing what it gives up.** The AMQP transport declares its
+durable queue on every publish, so a flow that runs before the collector ever
+has is not a lost run. A notifier cannot do that -- the queue belongs to the
+listener, and a broker discards what it has nothing to route to. Start the
+collector once before the first flow and the queue is durable from then on;
+if flows genuinely run before any collector exists, use the AMQP transport.
+
+### Dependencies lowered
+
+This package is meant to be co-installed into a service whose dependency
+versions it does not get to choose, and 1.0.0 asked for far more than it
+used. Every floor is now the oldest release the suite actually passes
+against, found by running it rather than by reading release notes.
+
+| | 1.0.0 | now |
+| --- | --- | --- |
+| taskflow | >=6.4.0 | **>=4.2.0** |
+| oslo.config | >=9.0.0 | **>=6.9.0** |
+| oslo.cache | >=3.0.0 | *dropped* |
+| oslo.serialization | >=2.18.0 | *dropped* |
+| oslo.utils | >=3.33.0 | *dropped* |
+| stevedore | >=1.20.0 | *dropped* |
+| SQLAlchemy (extra) | >=2.0 | **>=1.4.0** |
+| alembic (extra) | >=1.13 | **>=1.2.0** |
+| kombu (extra) | >=5.0 | **>=5.1.0** |
+
+- **Four required dependencies removed.** Nothing in the package imports
+  oslo.cache, oslo.serialization, oslo.utils or stevedore. The three that
+  taskflow needs arrive with taskflow. oslo.cache was reserved for a caching
+  datasource that was deferred; it returns as an extra when that lands.
+- **The `memcache`, `etcd` and `prometheus` extras are gone.** All three
+  installed libraries no code imported. `pip install taskflow-meter[memcache]`
+  now warns that the extra is unknown instead of pulling in dogpile.cache.
+- **`kombu` moved up**, not down: 5.0 does not import on Python 3.11.
+- **oslo.config compatibility fix.** `resolve_connection()` raised
+  `RequiredOptError` with the group *name*; oslo.config only learned to
+  accept a string there recently, and older versions raise from `__str__`
+  while formatting it -- burying the very message being reported. It now
+  passes the `OptGroup`, which every version handles.
+- **A `lowest-direct` CI job** installs every floor exactly, on Python 3.11,
+  and runs the whole suite. The floors were a claim nobody checked before:
+  every other job resolves to the newest release.
+- The contrib adapters still declare no dependency on their hosts, and are
+  now exercised against Django 3.2, Flask 2.3.3, FastAPI 0.100, Pecan 1.4 and
+  PasteDeploy 2.0.
 
 ## 1.0.0 - 2026-08-28
 

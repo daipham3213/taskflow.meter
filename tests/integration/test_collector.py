@@ -12,7 +12,7 @@
 
 """The collector deployment, end to end.
 
-M8's exit criterion. A flow publishes to a broker, a collector consumes
+A flow publishes to a broker, a collector consumes
 and writes to the meter's own database, and an API worker serves that
 store without polling anything -- each of them a component that would
 be its own process in a real deployment.
@@ -32,11 +32,14 @@ from pathlib import Path
 from typing import Any
 
 import kombu
+import oslo_messaging
 import pytest
+from oslo_config import cfg
 from taskflow import engines
 from taskflow.patterns import linear_flow
 
 from taskflow_meter import states
+from taskflow_meter.api.wsgi import WSGIApp
 from taskflow_meter.collect import attach
 from taskflow_meter.datasource.sqlalchemy import SQLADataSource
 from taskflow_meter.datasource.sqlalchemy import upgrade
@@ -44,6 +47,8 @@ from taskflow_meter.events import EventKind
 from taskflow_meter.meter import Meter
 from taskflow_meter.transports.amqp import AMQPSubscriber
 from taskflow_meter.transports.amqp import AMQPTransport
+from taskflow_meter.transports.oslo_messaging import OsloMessagingSubscriber
+from taskflow_meter.transports.oslo_messaging import OsloMessagingTransport
 from tests import wsgi_client
 from tests.conftest import ProgressingTask
 
@@ -119,6 +124,59 @@ def test_a_flow_reaches_the_api_through_a_broker_and_a_database(
     kinds = {event["kind"] for event in events["events"]}
     assert "atom_progress" in kinds
     assert events["truncated"] is False
+
+
+@pytest.mark.integration
+def test_the_same_journey_over_the_notification_bus(store_url: str) -> None:
+    """The oslo.messaging transport, end to end.
+
+    Same route as the AMQP test -- flow, bus, collector, database, API
+    worker -- over the transport an OpenStack service already has
+    configured, on oslo.messaging's in-process ``fake://`` driver.
+
+    The collector starts first here, and has to: a notifier cannot
+    create the listener's queue, so a bus with nothing bound to it
+    drops what is published. See the transport's module docstring.
+    """
+    conf = cfg.ConfigOpts()
+    topic = "tfm-integration"
+    # One notification transport, shared -- which is how a service does
+    # it, and which keeps either end from cleaning up the other's bus.
+    bus = oslo_messaging.get_notification_transport(conf, url="fake://")
+    subscriber = OsloMessagingSubscriber(
+        topic=topic, pool=f"pool-{topic}", conf=conf, transport=bus, park=5.0
+    )
+
+    with subscriber:
+        publisher = OsloMessagingTransport(
+            topic=topic, conf=conf, transport=bus
+        )
+        flow = linear_flow.Flow("demo").add(
+            ProgressingTask("first", steps=(0.5,)),
+            ProgressingTask("second"),
+        )
+        engine = engines.load(flow)
+        with attach(engine, publishers=[publisher]) as watched:
+            engine.run()
+            assert watched.flush(10.0)
+            run_id = watched.run_id
+
+        store = SQLADataSource(store_url)
+        assert subscriber.consume(store.apply_many, timeout=5.0) > 0
+
+    reader = SQLADataSource(store_url)
+    app = WSGIApp(Meter(reader, poll=False))
+
+    (flow_payload,) = wsgi_client.request(app, "/api/v1/flows").json()["flows"]
+    assert flow_payload["run_id"] == run_id
+    assert flow_payload["state"] == states.SUCCESS
+    assert flow_payload["completion"] == pytest.approx(1.0)
+
+    detail = wsgi_client.request(app, f"/api/v1/flows/{run_id}")
+    assert [atom["name"] for atom in detail.json()["atoms"]] == [
+        "first",
+        "second",
+    ]
 
 
 @pytest.mark.integration

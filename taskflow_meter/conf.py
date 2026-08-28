@@ -129,7 +129,12 @@ def resolve_connection(conf: cfg.ConfigOpts) -> str:
         f"[{GROUP_NAME}] connection, or run inside a service that sets "
         "[database] connection"
     )
-    raise cfg.RequiredOptError("connection", GROUP_NAME) from ValueError(msg)
+    # The group goes in as the OptGroup, not as its name: older
+    # oslo.config formats this exception with ``self.group.name``
+    # unconditionally, so a string there raises from ``__str__`` and
+    # buries the message this is being raised to deliver.  Reading
+    # ``.name`` off the group is what every version does.
+    raise cfg.RequiredOptError("connection", OPT_GROUP) from ValueError(msg)
 
 
 def _host_database_connection(conf: cfg.ConfigOpts) -> str | None:

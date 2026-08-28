@@ -12,7 +12,8 @@
 
 """Monitoring interfaces for OpenStack TaskFlow flow execution progress.
 
-See ``docs/PLAN.md`` for the design this package is being built out against.
+See ``docs/design.md`` for how it works and why; ``docs/guide.md`` for
+deploying it.
 """
 
 from __future__ import annotations

@@ -4,6 +4,9 @@ How to deploy it into an OpenStack service, and how to answer the two
 questions people actually have: *how far along is this flow?* and *what is it
 doing right now?*
 
+For why it is built the way it is -- what taskflow does and does not record,
+and the rules an embedded app has to obey -- see [design.md](design.md).
+
 ---
 
 ## 1. Point it at a taskflow backend
@@ -186,6 +189,41 @@ The queue is durable and declared on publish, so a flow that starts before the
 collector does is not a lost run. Events are keyed on `(run_id, seq)`, so a
 collector that reconnects and redelivers writes nothing twice.
 
+### Or on the bus the service already has
+
+Inside an OpenStack service, the notification bus is usually already
+configured, already monitored, and already pointed at the right broker with
+the right credentials. The oslo.messaging transport uses it rather than
+opening a connection of its own:
+
+```bash
+taskflow-meter collect --transport oslo-messaging   --url rabbit://guest@broker//   --store-url postgresql://user@host/meter
+```
+
+```python
+from taskflow_meter.transports.oslo_messaging import OsloMessagingTransport
+
+# No URL: the service's own transport_url decides.
+publisher = OsloMessagingTransport(conf=CONF)
+with attach(engine, publishers=[publisher]):
+    engine.run()
+```
+
+These go out as **notifications**, not RPC -- fire-and-forget fanout, which
+costs the flow nothing when no collector is running. They carry the
+`taskflow_meter.events` event type on the `taskflow-meter` topic, so a
+listener that also hears other traffic can pick them out. Several collectors
+sharing the default pool share one queue, and each notification is handled
+once rather than once per collector.
+
+**One difference from the AMQP transport, and it decides which to pick.** A
+notifier cannot declare the collector's queue -- the listener owns it -- and a
+broker drops what it has nothing to route to. So events published before any
+collector has *ever* run are lost. Start the collector once before the first
+flow and the queue is durable from then on; restarts cost nothing. If flows
+genuinely run before any collector exists, use the AMQP transport, which
+declares its queue on every publish.
+
 Unlike the persistence datasource, which inherits taskflow's retention, this
 store keeps what it is told until told otherwise:
 
@@ -195,7 +233,7 @@ store.prune(before=time.time() - 30 * 86400)
 
 ---
 
-## 3b. Watching from inside the process running the flow
+## 4. Watching from inside the process running the flow
 
 Everything above reads what taskflow persisted. If you control the code that
 runs the flow, attaching to the engine gets you two things reading cannot:
@@ -242,7 +280,7 @@ without limit would take the process down later for reasons nobody would
 connect back to monitoring. A publisher that raises is counted and logged,
 and the next batch is still attempted. None of it can fail a task.
 
-## 4. How far along is this flow?
+## 5. How far along is this flow?
 
 Every flow payload carries a `completion` between 0 and 1:
 
@@ -311,7 +349,7 @@ another process within one poll interval.
 
 ---
 
-## 5. What is it doing right now?
+## 6. What is it doing right now?
 
 `running_atoms` names the atoms currently executing. It is a list because
 unordered and graph flows run several at once, and it is empty between two
@@ -375,7 +413,7 @@ Two events are not flow activity and are worth handling:
 
 ---
 
-## 6. What the meter cannot tell you
+## 7. What the meter cannot tell you
 
 Worth knowing before you go looking for it:
 
