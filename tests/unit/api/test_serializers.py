@@ -111,3 +111,18 @@ def test_an_event_page_carries_its_resume_point() -> None:
     assert payload["links"]["next"] == (
         "/m/api/v1/flows/run-1/events?since_seq=4"
     )
+
+
+def test_a_flow_payload_names_what_is_running() -> None:
+    payload = serializers.flow(
+        make_flow(
+            state=states.RUNNING,
+            atoms=(
+                make_atom("busy", state=states.RUNNING, progress=0.5),
+                make_atom("idle", state=states.PENDING),
+            ),
+        ),
+        MeterRequest(),
+    )
+    assert payload["running_atoms"] == ["busy"]
+    assert payload["completion"] == 0.25

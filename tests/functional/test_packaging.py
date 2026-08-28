@@ -46,3 +46,20 @@ def test_declared_datasource_plugins_all_resolve() -> None:
     assert {ep.name for ep in found} == {"memory", "persistence"}
     for entry_point in found:
         assert issubclass(entry_point.load(), DataSource)
+
+
+def test_the_paste_factory_is_discoverable() -> None:
+    # So api-paste.ini can say `use = egg:taskflow-meter#meter`.
+    from importlib.metadata import entry_points
+
+    (found,) = entry_points(group="paste.app_factory", name="meter")
+    assert callable(found.load())
+
+
+def test_the_config_generator_hook_is_discoverable() -> None:
+    from importlib.metadata import entry_points
+
+    (found,) = entry_points(group="oslo.config.opts", name="taskflow_meter")
+    ((group, options),) = found.load()()
+    assert group.name == "taskflow_meter"
+    assert options

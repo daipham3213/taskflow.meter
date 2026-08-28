@@ -117,3 +117,31 @@ def test_snapshots_do_not_share_mutable_defaults() -> None:
     first, second = FlowSnapshot(run_id="a"), FlowSnapshot(run_id="b")
     first.atoms["x"] = AtomSnapshot(name="x")
     assert second.atoms == {}
+
+
+def test_running_atoms_answers_what_it_is_doing_now() -> None:
+    flow = make_flow(
+        atoms=(
+            make_atom("done", state=states.SUCCESS),
+            make_atom("zeta", state=states.RUNNING),
+            make_atom("alpha", state=states.RUNNING),
+            make_atom("waiting", state=states.PENDING),
+        )
+    )
+    # Plural and ordered: parallel flows run several at once.
+    assert [atom.name for atom in flow.running_atoms] == ["alpha", "zeta"]
+
+
+def test_a_reverting_atom_counts_as_running() -> None:
+    # It is what the flow is doing, even though it is undoing.
+    flow = make_flow(atoms=(make_atom("a", state=states.REVERTING),))
+    assert [atom.name for atom in flow.running_atoms] == ["a"]
+
+
+def test_nothing_is_running_between_atoms_or_after_the_end() -> None:
+    finished = make_flow(
+        state=states.SUCCESS,
+        atoms=(make_atom("a", state=states.SUCCESS),),
+    )
+    assert finished.running_atoms == ()
+    assert make_flow().running_atoms == ()

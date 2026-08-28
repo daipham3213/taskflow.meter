@@ -74,6 +74,30 @@ Mounted apps never receive the ASGI lifespan scope, so the meter also starts
 itself on the first request. If your host application has a lifespan of its
 own, prefer `meter.start()` / `meter.stop()` from it.
 
+### Inside a service you already run
+
+If your service composes its WSGI stack from `api-paste.ini`, dispatch a
+prefix to the meter and configure it in the service's own config file:
+
+```ini
+[composite:main]
+use = egg:Paste#urlmap
+/: your_api
+/taskflow-meter: taskflow_meter
+
+[app:taskflow_meter]
+paste.app_factory = taskflow_meter.contrib.paste:app_factory
+```
+
+```ini
+[taskflow_meter]
+connection = mysql+pymysql://user:password@host/taskflow
+```
+
+For Pecan services, `taskflow_meter.contrib.pecan.MeterController` mounts into
+the controller tree. See [the guide](docs/guide.md) for both, and for how to
+read completion and current-task out of the API.
+
 ### Endpoints
 
 | Path | What it returns |

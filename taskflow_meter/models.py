@@ -103,6 +103,21 @@ class FlowSnapshot:
         return self.atoms.get(name)
 
     @property
+    def running_atoms(self) -> tuple[AtomSnapshot, ...]:
+        """The atoms executing right now, in name order.
+
+        The answer to "what is it doing?".  A plural, because taskflow
+        runs unordered and graph flows in parallel, so there is often
+        more than one -- and none at all between two atoms, or once the
+        flow has finished.
+        """
+        return tuple(
+            self.atoms[name]
+            for name in self.atom_names
+            if self.atoms[name].is_running
+        )
+
+    @property
     def state_counts(self) -> dict[str, int]:
         counts: dict[str, int] = {}
         for atom in self.atoms.values():

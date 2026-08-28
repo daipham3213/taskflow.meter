@@ -61,6 +61,15 @@ Changelog = "https://github.com/daipham3213/taskflow-meter/releases"
 memory = "taskflow_meter.datasource.memory:MemoryDataSource"
 persistence = "taskflow_meter.datasource.persistence:PersistenceDataSource"
 
+# Lets a paste pipeline use `use = egg:taskflow-meter#meter`.
+[project.entry-points."paste.app_factory"]
+meter = "taskflow_meter.contrib.paste:app_factory"
+
+# Lets oslo-config-generator emit a sample [taskflow_meter] section into
+# the host service's config, which is where operators expect to find it.
+[project.entry-points."oslo.config.opts"]
+taskflow_meter = "taskflow_meter.conf:list_opts"
+
 [dependency-groups]
 dev = [
     "hacking>=8.1",
@@ -74,6 +83,13 @@ dev = [
     "SQLAlchemy>=2.0",
     "SQLAlchemy-Utils>=0.41",
     "alembic>=1.13",
+    # The hosts the contrib adapters are tested inside.  Test-only: a
+    # deployment hosting the meter in Pecan already has Pecan, so the
+    # adapters declare no runtime dependency of their own.
+    "PasteDeploy>=3.0",
+    "WebOb>=1.8",
+    "WebTest>=3.0",
+    "pecan>=1.5",
 ]
 
 [tool.hatch.version]
@@ -149,6 +165,18 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["taskflow_meter._version"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# The frameworks the contrib adapters plug into, none of which ship types.
+module = ["pecan.*", "webob.*", "webtest.*", "paste.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# pecan.expose() is untyped, and decorating with it is the only way to
+# register a controller method -- so the alternative to this is not
+# typing the adapter at all.
+module = ["taskflow_meter.contrib.pecan", "tests.unit.contrib.test_pecan"]
+disallow_untyped_decorators = false
 
 [[tool.mypy.overrides]]
 # mypy narrows a property like `meter.running` at the first assert and

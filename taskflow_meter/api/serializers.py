@@ -82,6 +82,9 @@ def flow(
         # weight them by, so this indicates rather than estimates.
         "completion": snapshot.completion,
         "atom_count": len(snapshot.atoms),
+        # What it is doing right now: a list, because parallel flows run
+        # several at once and a flow between atoms is running none.
+        "running_atoms": [atom.name for atom in snapshot.running_atoms],
         "state_counts": snapshot.state_counts,
         "meta": snapshot.meta,
         "links": links,

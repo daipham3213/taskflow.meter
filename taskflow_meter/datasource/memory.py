@@ -79,6 +79,11 @@ class MemoryDataSource(WritableDataSource):
         self._lock = threading.RLock()
         self._runs: dict[str, _Run] = {}
 
+    @property
+    def max_events_per_run(self) -> int:
+        """How much history each run keeps before the oldest is dropped."""
+        return self._max_events_per_run
+
     # -- writing ---------------------------------------------------------
 
     def apply(self, event: Event) -> None:
