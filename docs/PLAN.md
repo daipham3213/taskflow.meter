@@ -398,7 +398,7 @@ Concurrency groups cancel superseded runs; `permissions:` blocks are minimal
 | # | Scope | Exit criterion |
 | --- | --- | --- |
 | M0 **(done)** | Swap `uv_build` -> hatchling + hatch-vcs; ruff, mypy, `ci.yml`, `release.yml`, Apache-2.0, README | Lint, types, tests and build all green locally; wheel ships `py.typed` + a git-derived version |
-| M1 | `events.py`, `models.py`, `diff.py`, `datasource/base.py` + `memory` | Diff engine fully unit-tested |
+| M1 **(done)** | `states.py`, `events.py`, `models.py`, `diff.py`, `datasource/base.py` + `memory` | Diff engine fully unit-tested; 100% branch coverage on every module in this milestone |
 | M2 | `datasource/taskflow_persistence.py` + poller + `meter.py` lifecycle | Run a flow with a sqlite logbook in one process, observe full state + progress history from another |
 | M3 | `api/` core: `service`, `http`, `routes`, `router`, `serializers`, `sse` + `api/asgi.py` | REST + SSE standalone; mount-safe path handling unit-tested against both Starlette conventions |
 | M4 | `api/wsgi.py` | Shared routes byte-identical between the two callables |

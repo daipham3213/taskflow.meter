@@ -55,10 +55,10 @@ Source = "https://github.com/daipham3213/taskflow-meter"
 Issues = "https://github.com/daipham3213/taskflow-meter/issues"
 Changelog = "https://github.com/daipham3213/taskflow-meter/releases"
 
-# Plugin entry points (taskflow_meter.datasource / .transport) and the
-# oslo.config.opts hook are declared as their modules land -- an entry point
-# pointing at a module that does not exist yet breaks plugin discovery for
-# everything else in the same group.
+# Plugin entry points are declared as their modules land -- one pointing at a
+# module that does not exist yet breaks discovery for the whole group.
+[project.entry-points."taskflow_meter.datasource"]
+memory = "taskflow_meter.datasource.memory:MemoryDataSource"
 
 [dependency-groups]
 dev = [
@@ -90,7 +90,7 @@ include = [
 [tool.ruff]
 line-length = 79
 target-version = "py311"
-src = ["taskflow_meter", "tests"]
+src = ["."]
 
 [tool.ruff.lint]
 select = [
@@ -109,6 +109,9 @@ select = [
     "UP",   # pyupgrade
     "W",    # pycodestyle warnings
 ]
+
+[tool.ruff.lint.isort]
+known-first-party = ["taskflow_meter", "tests"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["ARG"]
