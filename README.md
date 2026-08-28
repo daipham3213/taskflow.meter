@@ -73,9 +73,13 @@ polling anything.
 
 ```bash
 taskflow-meter upgrade --store-url postgresql://host/meter
-taskflow-meter collect --amqp-url amqp://broker// --store-url postgresql://host/meter
+taskflow-meter collect --url amqp://broker// --store-url postgresql://host/meter
 taskflow-meter serve   --store-url postgresql://host/meter
 ```
+
+Inside OpenStack, `--transport oslo-messaging` puts the events on the
+notification bus the service is already configured for, instead of opening a
+broker connection of its own.
 One caveat for WSGI deployments: a synchronous worker holds a thread for as
 long as an SSE stream stays open, so use gevent or eventlet workers for
 streaming, or let clients poll `/events?since_seq=` instead.
@@ -172,7 +176,8 @@ Everything else is optional, and only needed by the feature that imports it:
 | --- | --- | --- |
 | `sqlalchemy` | SQLAlchemy 1.4+, alembic 1.2+ | The collector's own store |
 | `amqp` | kombu 5.1+ | Publishing events to a broker |
-| `all` | both | |
+| `oslo-messaging` | oslo.messaging 6.0+ | Publishing onto the service's own notification bus |
+| `all` | all three | |
 
 The contrib adapters declare no dependency on their hosts -- a deployment
 mounting the meter in Django already has Django. They are tested against

@@ -152,3 +152,97 @@ def test_polling_gives_the_meter_an_event_history(
     app = cli.build_app(sqlite_conf, poll=True, interval=1.0)
     assert app.meter.poller is not None
     assert app.meter.supports_events is True
+
+
+def test_collect_defaults_to_amqp() -> None:
+    args = cli.build_parser().parse_args(
+        ["collect", "--url", "amqp://host//", "--store-url", "sqlite://"]
+    )
+    assert args.transport == "amqp"
+    assert args.amqp_url == "amqp://host//"
+
+
+def test_collect_can_read_the_notification_bus() -> None:
+    args = cli.build_parser().parse_args(
+        [
+            "collect",
+            "--transport",
+            "oslo-messaging",
+            "--url",
+            "rabbit://host//",
+            "--store-url",
+            "sqlite://",
+        ]
+    )
+    assert args.transport == "oslo-messaging"
+
+
+def test_the_1_0_spelling_of_the_url_still_works() -> None:
+    """--amqp-url shipped in 1.0, so collectors already use it."""
+    args = cli.build_parser().parse_args(
+        ["collect", "--amqp-url", "amqp://host//", "--store-url", "sqlite://"]
+    )
+    assert args.amqp_url == "amqp://host//"
+
+
+def test_the_two_spellings_of_the_url_are_exclusive(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit):
+        cli.build_parser().parse_args(
+            [
+                "collect",
+                "--url",
+                "a",
+                "--amqp-url",
+                "b",
+                "--store-url",
+                "sqlite://",
+            ]
+        )
+    assert "not allowed with" in capsys.readouterr().err
+
+
+def test_collect_needs_a_url() -> None:
+    with pytest.raises(SystemExit):
+        cli.build_parser().parse_args(["collect", "--store-url", "sqlite://"])
+
+
+@pytest.mark.parametrize("transport", sorted(cli.SUBSCRIBERS))
+def test_every_offered_transport_can_be_built(transport: str) -> None:
+    """A choice the parser offers but cannot construct is a trap."""
+    url = {"amqp": "memory://", "oslo-messaging": "fake://"}[transport]
+    subscriber = cli.build_subscriber(transport, url)
+    assert subscriber.name
+
+
+def test_a_transport_without_its_extra_says_which_extra(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """--transport offers the choice whether or not the extra is there."""
+
+    import importlib
+
+    def no_module(name: str) -> Any:
+        raise ImportError(name)
+
+    monkeypatch.setattr(importlib, "import_module", no_module)
+    with pytest.raises(SystemExit, match=r"taskflow-meter\[oslo-messaging\]"):
+        cli.build_subscriber("oslo-messaging", "rabbit://host//")
+
+
+def test_the_store_without_its_extra_says_which_extra(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import builtins
+
+    real_import = builtins.__import__
+
+    def no_sqlalchemy(name: str, *args: Any, **kwargs: Any) -> Any:
+        if name.startswith("taskflow_meter.datasource.sqlalchemy"):
+            raise ImportError(name)
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", no_sqlalchemy)
+    with pytest.raises(SystemExit, match=r"taskflow-meter\[sqlalchemy\]"):
+        cli.build_store("sqlite://")

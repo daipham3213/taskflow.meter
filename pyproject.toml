@@ -42,8 +42,9 @@ dependencies = [
 [project.optional-dependencies]
 sqlalchemy = ["SQLAlchemy>=1.4.0", "alembic>=1.2.0"]
 amqp = ["kombu>=5.1.0"]
+oslo-messaging = ["oslo.messaging>=6.0.0"]
 all = [
-    "taskflow-meter[sqlalchemy,amqp]",
+    "taskflow-meter[sqlalchemy,amqp,oslo-messaging]",
 ]
 
 [project.scripts]
@@ -67,6 +68,7 @@ memory = "taskflow_meter.transports.memory:MemoryTransport"
 datasource = "taskflow_meter.transports.memory:DataSourcePublisher"
 http = "taskflow_meter.transports.http:HTTPTransport"
 amqp = "taskflow_meter.transports.amqp:AMQPTransport"
+oslo_messaging = "taskflow_meter.transports.oslo_messaging:OsloMessagingTransport"
 
 # Lets a paste pipeline use `use = egg:taskflow-meter#meter`.
 [project.entry-points."paste.app_factory"]
@@ -96,6 +98,9 @@ dev = [
     # The broker the AMQP transport speaks; kombu ships an in-process
     # transport, so the collector path is testable without RabbitMQ.
     "kombu>=5.1.0",
+    # Likewise: oslo.messaging ships a fake:// driver, so the
+    # notification path is testable without a bus.
+    "oslo.messaging>=6.0.0",
     # The hosts the contrib adapters are tested inside, at the oldest
     # version each is tested at.  Test-only: a deployment hosting the
     # meter in Django already has Django, so the adapters declare no
@@ -180,7 +185,7 @@ disallow_subclassing_any = false
 
 [[tool.mypy.overrides]]
 # None of these ship type information.
-module = ["taskflow.*", "oslo_config.*", "oslo_utils.*"]
+module = ["taskflow.*", "oslo_config.*", "oslo_messaging.*", "oslo_utils.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

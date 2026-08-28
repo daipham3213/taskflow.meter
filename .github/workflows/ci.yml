@@ -85,8 +85,12 @@ jobs:
           uv sync --python 3.11 --group dev --all-extras \
             --resolution lowest-direct
           uv pip list
+      # No --python here on purpose: a request uv cannot satisfy makes it
+      # fall back to whatever environment exists, with a warning that is
+      # easy to miss, and the job would then quietly test the wrong
+      # versions. The sync above already pinned the interpreter.
       - name: pytest
-        run: uv run --python 3.11 --frozen --no-sync pytest
+        run: uv run --frozen --no-sync pytest
 
   build:
     runs-on: ubuntu-latest

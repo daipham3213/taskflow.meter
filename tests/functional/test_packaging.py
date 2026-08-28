@@ -87,6 +87,7 @@ def test_the_declared_floors_are_the_ones_that_were_tested() -> None:
         "sqlalchemy": "1.4.0",
         "alembic": "1.2.0",
         "kombu": "5.1.0",
+        "oslo-messaging": "6.0.0",
     }
 
 
@@ -135,6 +136,7 @@ def test_declared_transports_all_resolve() -> None:
         "datasource",
         "http",
         "amqp",
+        "oslo_messaging",
     }
     for entry_point in found:
         assert issubclass(entry_point.load(), Publisher)

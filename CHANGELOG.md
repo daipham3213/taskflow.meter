@@ -5,6 +5,43 @@ entry lands here in the release it ships in.
 
 ## Unreleased
 
+### An oslo.messaging transport
+
+Events can now go out on the notification bus an OpenStack service is
+already configured for, instead of over a broker connection of the meter's
+own. The operator's existing `transport_url` and
+`[oslo_messaging_notifications]` settings apply unchanged, whichever driver
+they chose is the one used, and the events land beside everything else the
+deployment already collects.
+
+```bash
+taskflow-meter collect --transport oslo-messaging \
+  --url rabbit://guest@broker// --store-url postgresql://host/meter
+```
+
+```python
+from taskflow_meter.transports.oslo_messaging import OsloMessagingTransport
+
+publisher = OsloMessagingTransport(conf=CONF)  # no URL: the service decides
+```
+
+- **Notifications, not RPC.** RPC is a call with a reply and a server
+  expected to be listening; a flow reporting progress wants neither.
+- **`collect` grew `--transport`**, defaulting to `amqp`. Its `--amqp-url`
+  is now spelled `--url`; the old name still works, so collectors deployed
+  against 1.0.0 keep running.
+- The wire envelope is shared with the AMQP transport, so a collector parses
+  the same thing either way.
+- New extra: `taskflow-meter[oslo-messaging]`, floor **oslo.messaging 6.0.0**
+  (5.0.0 fails the suite), found the same way as every other floor.
+
+**Pick this one knowing what it gives up.** The AMQP transport declares its
+durable queue on every publish, so a flow that runs before the collector ever
+has is not a lost run. A notifier cannot do that -- the queue belongs to the
+listener, and a broker discards what it has nothing to route to. Start the
+collector once before the first flow and the queue is durable from then on;
+if flows genuinely run before any collector exists, use the AMQP transport.
+
 ### Dependencies lowered
 
 This package is meant to be co-installed into a service whose dependency

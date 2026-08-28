@@ -21,11 +21,27 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Callable
+from collections.abc import Mapping
 from collections.abc import Sequence
 from types import TracebackType
+from typing import Any
 from typing import Self
 
 from taskflow_meter.events import Event
+
+
+def to_payload(events: Sequence[Event]) -> dict[str, Any]:
+    """The envelope every transport that leaves the process sends.
+
+    One shape, so a collector reading one transport and a collector
+    reading another are parsing the same thing.
+    """
+    return {"events": [event.to_dict() for event in events]}
+
+
+def from_payload(payload: Mapping[str, Any]) -> list[Event]:
+    """Read that envelope back.  Raises if it is not one."""
+    return [Event.from_dict(item) for item in payload["events"]]
 
 
 class Publisher(abc.ABC):

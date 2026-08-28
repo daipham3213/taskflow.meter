@@ -33,6 +33,7 @@ Three commands, which between them cover both deployments:
 from __future__ import annotations
 
 import argparse
+import importlib
 import logging
 import socketserver
 from collections.abc import Sequence
@@ -131,10 +132,26 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     collect.add_argument(
-        "--amqp-url",
-        required=True,
+        "--transport",
+        choices=sorted(SUBSCRIBERS),
+        default="amqp",
+        help="how to receive events (default: amqp)",
+    )
+    source = collect.add_mutually_exclusive_group(required=True)
+    source.add_argument(
+        "--url",
+        dest="amqp_url",
         metavar="URL",
         help="broker to consume from, for example amqp://host//",
+    )
+    source.add_argument(
+        # The 1.0 spelling.  It only ever meant a broker URL, which is
+        # what --url means, so it stays as an alias rather than
+        # breaking every collector already deployed.
+        "--amqp-url",
+        dest="amqp_url",
+        metavar="URL",
+        help=argparse.SUPPRESS,
     )
     collect.add_argument(
         "--store-url",
@@ -190,6 +207,40 @@ def build_app(
     return WSGIApp(Meter(source, poll=poll, interval=interval))
 
 
+#: The transports `collect` can read from, by their plugin name.  Kept
+#: as names rather than classes so importing the CLI does not import
+#: kombu and oslo.messaging, both of which are extras.
+SUBSCRIBERS = {
+    "amqp": ("taskflow_meter.transports.amqp", "AMQPSubscriber"),
+    "oslo-messaging": (
+        "taskflow_meter.transports.oslo_messaging",
+        "OsloMessagingSubscriber",
+    ),
+}
+
+
+#: Which extra installs each transport, for the error message below.
+TRANSPORT_EXTRAS = {"amqp": "amqp", "oslo-messaging": "oslo-messaging"}
+
+
+def build_subscriber(transport: str, url: str) -> Any:
+    """Open the receiving end of whichever transport was asked for."""
+    module_name, class_name = SUBSCRIBERS[transport]
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError as exc:
+        # --transport offers the choice whether or not its extra is
+        # installed, so say which one rather than surfacing the
+        # traceback for a library the user never named.
+        extra = TRANSPORT_EXTRAS[transport]
+        msg = (
+            f"the {transport} transport needs its extra: "
+            f"pip install 'taskflow-meter[{extra}]'"
+        )
+        raise SystemExit(msg) from exc
+    return getattr(module, class_name)(url)
+
+
 def build_store(url: str, *, create_schema: bool = False) -> Any:
     """Open the meter's own database.
 
@@ -197,7 +248,14 @@ def build_store(url: str, *, create_schema: bool = False) -> Any:
     and `taskflow-meter serve` against a taskflow backend must not
     require it.
     """
-    from taskflow_meter.datasource.sqlalchemy import SQLADataSource
+    try:
+        from taskflow_meter.datasource.sqlalchemy import SQLADataSource
+    except ImportError as exc:
+        msg = (
+            "the meter's own database needs its extra: "
+            "pip install 'taskflow-meter[sqlalchemy]'"
+        )
+        raise SystemExit(msg) from exc
 
     return SQLADataSource(url, create_schema=create_schema)
 
@@ -236,14 +294,12 @@ def collect_command(args: argparse.Namespace) -> int:
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
     )
-    from taskflow_meter.transports.amqp import AMQPSubscriber
-
     store = build_store(args.store_url, create_schema=args.create_schema)
-    subscriber = AMQPSubscriber(args.amqp_url)
+    subscriber = build_subscriber(args.transport, args.amqp_url)
     total = 0
 
     with store, subscriber:
-        LOG.info("collecting from %s", args.amqp_url)
+        LOG.info("collecting from %s over %s", args.amqp_url, args.transport)
         try:
             while True:
                 received = subscriber.consume(
