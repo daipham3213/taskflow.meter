@@ -40,7 +40,7 @@ dependencies = [
 memcache = ["oslo.cache[dogpile]>=3.0.0"]
 etcd = ["oslo.cache[etcd3gw]>=3.0.0"]
 sqlalchemy = ["SQLAlchemy>=2.0", "alembic>=1.13"]
-amqp = ["kombu>=4.3.0"]
+amqp = ["kombu>=5.0"]
 prometheus = ["prometheus-client>=0.20"]
 all = [
     "taskflow-meter[memcache,etcd,sqlalchemy,amqp,prometheus]",
@@ -60,11 +60,13 @@ Changelog = "https://github.com/daipham3213/taskflow-meter/releases"
 [project.entry-points."taskflow_meter.datasource"]
 memory = "taskflow_meter.datasource.memory:MemoryDataSource"
 persistence = "taskflow_meter.datasource.persistence:PersistenceDataSource"
+sqlalchemy = "taskflow_meter.datasource.sqlalchemy.source:SQLADataSource"
 
 [project.entry-points."taskflow_meter.transport"]
 memory = "taskflow_meter.transports.memory:MemoryTransport"
 datasource = "taskflow_meter.transports.memory:DataSourcePublisher"
 http = "taskflow_meter.transports.http:HTTPTransport"
+amqp = "taskflow_meter.transports.amqp:AMQPTransport"
 
 # Lets a paste pipeline use `use = egg:taskflow-meter#meter`.
 [project.entry-points."paste.app_factory"]
@@ -88,6 +90,9 @@ dev = [
     "SQLAlchemy>=2.0",
     "SQLAlchemy-Utils>=0.41",
     "alembic>=1.13",
+    # The broker the AMQP transport speaks; kombu ships an in-process
+    # transport, so the collector path is testable without RabbitMQ.
+    "kombu>=5.0",
     # The hosts the contrib adapters are tested inside.  Test-only: a
     # deployment hosting the meter in Django already has Django, so the
     # adapters declare no runtime dependency of their own.
@@ -179,6 +184,7 @@ ignore_missing_imports = true
 module = [
     "django.*",
     "flask.*",
+    "kombu.*",
     "paste.*",
     "pecan.*",
     "webob.*",

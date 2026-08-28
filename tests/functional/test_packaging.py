@@ -43,7 +43,11 @@ def test_declared_datasource_plugins_all_resolve() -> None:
     from taskflow_meter.datasource.base import DataSource
 
     found = entry_points(group="taskflow_meter.datasource")
-    assert {ep.name for ep in found} == {"memory", "persistence"}
+    assert {ep.name for ep in found} == {
+        "memory",
+        "persistence",
+        "sqlalchemy",
+    }
     for entry_point in found:
         assert issubclass(entry_point.load(), DataSource)
 
@@ -71,6 +75,11 @@ def test_declared_transports_all_resolve() -> None:
     from taskflow_meter.transports.base import Publisher
 
     found = entry_points(group="taskflow_meter.transport")
-    assert {ep.name for ep in found} == {"memory", "datasource", "http"}
+    assert {ep.name for ep in found} == {
+        "memory",
+        "datasource",
+        "http",
+        "amqp",
+    }
     for entry_point in found:
         assert issubclass(entry_point.load(), Publisher)

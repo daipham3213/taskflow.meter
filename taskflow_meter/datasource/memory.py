@@ -24,7 +24,6 @@ import logging
 import threading
 from collections import deque
 from dataclasses import replace
-from typing import Any
 
 from taskflow_meter.datasource.base import DEFAULT_EVENT_LIMIT
 from taskflow_meter.datasource.base import DEFAULT_FLOW_LIMIT
@@ -33,8 +32,9 @@ from taskflow_meter.datasource.base import FlowPage
 from taskflow_meter.datasource.base import UnknownMarkerError
 from taskflow_meter.datasource.base import WritableDataSource
 from taskflow_meter.events import Event
-from taskflow_meter.events import EventKind
-from taskflow_meter.models import AtomSnapshot
+from taskflow_meter.fold import contiguous_from
+from taskflow_meter.fold import flow_from_event
+from taskflow_meter.fold import fold
 from taskflow_meter.models import FlowSnapshot
 
 LOG = logging.getLogger(__name__)
@@ -90,11 +90,11 @@ class MemoryDataSource(WritableDataSource):
         with self._lock:
             run = self._runs.get(event.run_id)
             if run is None:
-                run = _Run(_flow_from_event(event), self._max_events_per_run)
+                run = _Run(flow_from_event(event), self._max_events_per_run)
                 self._runs[event.run_id] = run
                 self._evict_if_needed()
 
-            run.flow = _fold(run.flow, event)
+            run.flow = fold(run.flow, event)
             self._record(run, event)
 
     def _record(self, run: _Run, event: Event) -> None:
@@ -212,16 +212,7 @@ class MemoryDataSource(WritableDataSource):
             oldest if truncated and oldest is not None else since_seq + 1
         )
 
-        selected: list[Event] = []
-        for event in stored:
-            if event.seq < expected:
-                continue
-            if event.seq != expected:
-                break
-            selected.append(event)
-            expected += 1
-            if len(selected) >= limit:
-                break
+        selected = contiguous_from(stored, expected, limit)
 
         return EventPage(
             events=tuple(selected),
@@ -239,82 +230,3 @@ def _detach(flow: FlowSnapshot) -> FlowSnapshot:
     believes.  A monitoring read must never be able to do that.
     """
     return replace(flow, atoms=dict(flow.atoms))
-
-
-def _flow_from_event(event: Event) -> FlowSnapshot:
-    """Seed a run from the first event seen for it.
-
-    The diff engine puts the flow's identity on the first event of a run,
-    but a client may still join mid-stream, so everything here has to
-    tolerate absence.
-    """
-    details = event.details
-    return FlowSnapshot(
-        run_id=event.run_id,
-        name=str(details.get("flow_name", "")),
-        book_id=event.book_id,
-        book_name=_optional_str(details.get("book_name")),
-        observed_at=event.ts,
-    )
-
-
-def _optional_str(value: Any) -> str | None:
-    return None if value is None else str(value)
-
-
-def _fold(flow: FlowSnapshot, event: Event) -> FlowSnapshot:
-    """Return ``flow`` updated by ``event``."""
-    flow = replace(flow, observed_at=max(flow.observed_at, event.ts))
-
-    if event.kind is EventKind.FLOW_STATE:
-        return replace(flow, state=event.state)
-
-    if event.kind in (EventKind.ATOM_STATE, EventKind.ATOM_PROGRESS):
-        if event.atom_name is None:
-            LOG.warning(
-                "ignoring %s event %d for run %s: no atom name",
-                event.kind,
-                event.seq,
-                event.run_id,
-            )
-            return flow
-        atoms = dict(flow.atoms)
-        atoms[event.atom_name] = _fold_atom(
-            atoms.get(event.atom_name), event, event.atom_name
-        )
-        return replace(flow, atoms=atoms)
-
-    return flow
-
-
-def _fold_atom(
-    atom: AtomSnapshot | None, event: Event, name: str
-) -> AtomSnapshot:
-    if atom is None:
-        atom = AtomSnapshot(name=name)
-
-    changes: dict[str, Any] = {}
-    if event.atom_uuid is not None:
-        changes["uuid"] = event.atom_uuid
-    if event.atom_type is not None:
-        changes["atom_type"] = event.atom_type
-    if event.intention is not None:
-        changes["intention"] = event.intention
-    if event.progress is not None:
-        changes["progress"] = event.progress
-
-    if event.kind is EventKind.ATOM_STATE:
-        changes["state"] = event.state
-        failure = event.details.get("failure")
-        if failure is not None:
-            changes["failure"] = failure
-        revert_failure = event.details.get("revert_failure")
-        if revert_failure is not None:
-            changes["revert_failure"] = revert_failure
-        if event.details.get("has_result"):
-            changes["has_result"] = True
-
-    if event.kind is EventKind.ATOM_PROGRESS:
-        changes["progress_details"] = event.details.get("progress_details")
-
-    return replace(atom, **changes)

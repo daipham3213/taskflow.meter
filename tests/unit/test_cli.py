@@ -124,10 +124,20 @@ def test_ctrl_c_is_a_clean_shutdown(
     assert cli.main(["serve", "--connection", sqlite_conf]) == 0
 
 
-def test_serve_needs_a_connection() -> None:
+def test_serve_needs_somewhere_to_read_from(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # A usage error, not a traceback: there are two valid sources and
+    # the message has to name both.
     with pytest.raises(SystemExit) as excinfo:
         cli.main(["serve"])
-    assert excinfo.value.code != 0
+    assert excinfo.value.code == 2
+    assert "--connection or --store-url" in capsys.readouterr().err
+
+
+def test_building_an_app_with_neither_source_is_rejected() -> None:
+    with pytest.raises(ValueError, match="--connection or --store-url"):
+        cli.build_app()
 
 
 def test_no_poll_reads_the_backend_directly(sqlite_conf: str) -> None:

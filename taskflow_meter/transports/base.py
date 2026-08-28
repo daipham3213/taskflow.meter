@@ -20,6 +20,7 @@ the chance to.
 from __future__ import annotations
 
 import abc
+from collections.abc import Callable
 from collections.abc import Sequence
 from types import TracebackType
 from typing import Self
@@ -46,6 +47,50 @@ class Publisher(abc.ABC):
     @abc.abstractmethod
     def publish(self, events: Sequence[Event]) -> None:
         """Send a batch.  Never called with an empty one."""
+
+    def __enter__(self) -> Self:
+        self.start()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        self.stop()
+
+
+class Subscriber(abc.ABC):
+    """Receives events somebody else published.
+
+    The collector's end of a transport: one process consumes what the
+    flows emitted and writes it to a datasource that any number of API
+    workers read.
+    """
+
+    #: Stevedore plugin name, set by subclasses.
+    name: str = ""
+
+    def start(self) -> None:  # noqa: B027 - optional hook, not abstract
+        """Acquire whatever the transport needs.  Idempotent."""
+
+    def stop(self) -> None:  # noqa: B027 - optional hook, not abstract
+        """Release it again.  Idempotent, and safe to call unstarted."""
+
+    @abc.abstractmethod
+    def consume(
+        self,
+        handler: Callable[[Sequence[Event]], None],
+        *,
+        timeout: float | None = None,
+    ) -> int:
+        """Deliver whatever has arrived, and return how many events.
+
+        Returns when nothing more arrives within ``timeout``, so the
+        caller owns the loop -- and can shut it down between batches
+        rather than being trapped inside one.
+        """
 
     def __enter__(self) -> Self:
         self.start()
