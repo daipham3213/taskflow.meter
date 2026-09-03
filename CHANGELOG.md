@@ -5,6 +5,15 @@ entry lands here in the release it ships in.
 
 ## Unreleased
 
+### Fixed
+
+- **A failed atom now says what it failed of.** The fold layer has always
+  understood `failure` and `revert_failure`; the listener never emitted them,
+  so watching an engine reported *that* a task failed and reading persistence
+  reported *why*. It now renders the `Failure` taskflow hands it, in the same
+  shape the persistence datasource produces -- `models.failure_dict`, shared by
+  both -- so a client cannot tell which producer it is reading.
+
 ### Documentation
 
 - **`docs/PLAN.md` is gone.** It was a pre-build plan, and by 1.0 it was

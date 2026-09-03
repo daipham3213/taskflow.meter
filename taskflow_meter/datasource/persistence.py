@@ -46,6 +46,7 @@ from taskflow import exceptions as tf_exc
 from taskflow.persistence import backends as tf_backends
 from taskflow.persistence import models as tf_models
 
+from taskflow_meter import models
 from taskflow_meter.datasource.base import DEFAULT_EVENT_LIMIT
 from taskflow_meter.datasource.base import DEFAULT_FLOW_LIMIT
 from taskflow_meter.datasource.base import DataSource
@@ -281,8 +282,10 @@ def _atom_snapshot(detail: Any) -> AtomSnapshot:
         intention=detail.intention,
         progress=float(meta.get(_META_PROGRESS) or 0.0),
         progress_details=meta.get(_META_PROGRESS_DETAILS),
-        failure=_failure_dict(detail.failure),
-        revert_failure=_failure_dict(getattr(detail, "revert_failure", None)),
+        failure=models.failure_dict(detail.failure),
+        revert_failure=models.failure_dict(
+            getattr(detail, "revert_failure", None)
+        ),
         # Carrying results would mean copying arbitrary application data
         # into a monitoring path, so only their presence is reported.  A
         # task that returns None is indistinguishable from one that
@@ -290,17 +293,6 @@ def _atom_snapshot(detail: Any) -> AtomSnapshot:
         has_result=detail.results is not None,
         meta=meta,
     )
-
-
-def _failure_dict(failure: Any) -> dict[str, Any] | None:
-    """Render a taskflow Failure, tolerating anything that is not one."""
-    if failure is None:
-        return None
-    try:
-        return dict(failure.to_dict())
-    except Exception:
-        LOG.warning("could not serialise a failure", exc_info=True)
-        return {"unserialisable": repr(failure)}
 
 
 def _epoch(when: Any) -> float | None:

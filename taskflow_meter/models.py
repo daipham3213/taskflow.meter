@@ -20,11 +20,14 @@ producer it is talking to.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
 
 from taskflow_meter import states
+
+LOG = logging.getLogger(__name__)
 
 TASK = "task"
 RETRY = "retry"
@@ -141,3 +144,20 @@ class FlowSnapshot:
 
 def _clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
     return max(low, min(high, value))
+
+
+def failure_dict(failure: Any) -> dict[str, Any] | None:
+    """Render a taskflow ``Failure``, tolerating anything that is not one.
+
+    Lives here because both producers report failures and a client must
+    not have to tell which one it is reading: the persistence datasource
+    renders what taskflow stored, the listener renders what taskflow
+    handed it as it happened, and this is the one shape either way.
+    """
+    if failure is None:
+        return None
+    try:
+        return dict(failure.to_dict())
+    except Exception:
+        LOG.warning("could not serialise a failure", exc_info=True)
+        return {"unserialisable": repr(failure)}
