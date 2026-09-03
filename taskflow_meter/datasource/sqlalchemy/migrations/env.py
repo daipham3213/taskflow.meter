@@ -30,6 +30,17 @@ from taskflow_meter.datasource.sqlalchemy.models import metadata
 config = context.config
 target_metadata = metadata
 
+#: Default name of alembic's own bookkeeping table.  Overridable,
+#: because this schema may share a database with a host service that has
+#: an alembic tree of its own -- and two trees writing one
+#: ``alembic_version`` row each mistake the other's revision for a
+#: missing one.
+DEFAULT_VERSION_TABLE = "alembic_version"
+
+
+def _version_table() -> str:
+    return config.get_main_option("version_table", DEFAULT_VERSION_TABLE)
+
 
 def run_migrations_offline() -> None:
     context.configure(
@@ -37,6 +48,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        version_table=_version_table(),
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -57,7 +69,11 @@ def run_migrations_online() -> None:
 
 
 def _run(connection: Any) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        version_table=_version_table(),
+    )
     with context.begin_transaction():
         context.run_migrations()
 

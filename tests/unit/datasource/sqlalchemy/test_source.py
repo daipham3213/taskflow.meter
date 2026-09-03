@@ -374,6 +374,26 @@ def test_upgrade_is_idempotent(tmp_path: Path) -> None:
     upgrade(url)
 
 
+def test_upgrade_can_be_told_where_to_keep_its_revision(
+    tmp_path: Path,
+) -> None:
+    # Sharing a database with a host service that migrates its own schema
+    # means sharing ``alembic_version`` unless this is passed, and each
+    # tree then reads the other's revision as one it has never heard of.
+    url = f"sqlite:///{tmp_path / 'shared.db'}"
+    upgrade(url, version_table="taskflow_meter_version")
+
+    store = SQLADataSource(url)
+    with store.engine.begin() as conn:
+        tables = set(sa.inspect(conn).get_table_names())
+
+    assert "taskflow_meter_version" in tables
+    assert "alembic_version" not in tables
+
+    # And it stays idempotent against the table it was given.
+    upgrade(url, version_table="taskflow_meter_version")
+
+
 def test_the_source_can_be_stopped_and_reused(
     tmp_path: Path,
 ) -> None:

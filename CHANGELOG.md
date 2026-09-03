@@ -21,6 +21,14 @@ entry lands here in the release it ships in.
   reported `name = ""` for the whole run. The name is now taken from whichever
   event carries it.
 
+### Sharing a database with the host service
+
+- **`upgrade()` takes `version_table`.** The store's alembic tree kept its
+  revision in `alembic_version`, which is also where a host service keeps its
+  own -- so the two trees each read the other's revision as one they have never
+  heard of. Deployments that put the store in the service's database can now
+  give it a table of its own, and nothing changes for those that do not.
+
 ### Documentation
 
 - **`docs/PLAN.md` is gone.** It was a pre-build plan, and by 1.0 it was

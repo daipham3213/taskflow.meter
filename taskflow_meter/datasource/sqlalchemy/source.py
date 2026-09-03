@@ -352,11 +352,23 @@ def _event_from_row(row: Any) -> Event:
     )
 
 
-def upgrade(url: str, revision: str = "head") -> None:
+def upgrade(
+    url: str,
+    revision: str = "head",
+    *,
+    version_table: str | None = None,
+) -> None:
     """Bring a database up to date, the way a deployment should.
 
     Imported lazily: alembic is only needed by whoever runs migrations,
     not by every process that reads the results.
+
+    ``version_table`` renames alembic's bookkeeping table, which matters
+    when this schema shares a database with a host service that migrates
+    its own: both would otherwise keep their revision in
+    ``alembic_version``, and each would read the other's as a revision it
+    has never heard of.  Pass the same name on every upgrade of a given
+    database -- changing it later looks exactly like an unmigrated one.
     """
     from alembic import command
     from alembic.config import Config
@@ -364,4 +376,6 @@ def upgrade(url: str, revision: str = "head") -> None:
     config = Config()
     config.set_main_option("script_location", str(MIGRATIONS))
     config.set_main_option("sqlalchemy.url", url)
+    if version_table is not None:
+        config.set_main_option("version_table", version_table)
     command.upgrade(config, revision)
