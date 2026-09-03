@@ -42,7 +42,7 @@ import logging
 import threading
 from collections.abc import AsyncIterator
 from types import TracebackType
-from typing import Self
+from typing import TypeVar
 
 from taskflow_meter.datasource.base import DEFAULT_EVENT_LIMIT
 from taskflow_meter.datasource.base import DEFAULT_FLOW_LIMIT
@@ -57,6 +57,8 @@ from taskflow_meter.poller import DEFAULT_INTERVAL
 from taskflow_meter.poller import Poller
 
 LOG = logging.getLogger(__name__)
+
+_M = TypeVar("_M", bound="Meter")
 
 
 class Meter:
@@ -180,7 +182,7 @@ class Meter:
             self._holders = 0
             self._stop_locked()
 
-    def __enter__(self) -> Self:
+    def __enter__(self: _M) -> _M:
         self.start()
         return self
 

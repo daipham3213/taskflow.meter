@@ -160,7 +160,7 @@ serving an empty stream that cannot be told apart from silence.
 
 ## Requirements
 
-- Python 3.11+
+- Python 3.10+
 - taskflow 4.2.0+
 - oslo.config 6.9.0+
 
@@ -223,8 +223,8 @@ CI also runs the suite with every declared dependency floor installed exactly,
 which is the only job that checks those floors are real. To reproduce it:
 
 ```bash
-uv lock --python 3.11 --resolution lowest-direct
-uv sync --python 3.11 --group dev --all-extras --resolution lowest-direct
+uv lock --python 3.10 --resolution lowest-direct
+uv sync --python 3.10 --group dev --all-extras --resolution lowest-direct
 uv run --frozen --no-sync pytest
 ```
 

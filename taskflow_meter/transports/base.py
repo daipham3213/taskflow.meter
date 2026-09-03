@@ -25,9 +25,12 @@ from collections.abc import Mapping
 from collections.abc import Sequence
 from types import TracebackType
 from typing import Any
-from typing import Self
+from typing import TypeVar
 
 from taskflow_meter.events import Event
+
+_P = TypeVar("_P", bound="Publisher")
+_S = TypeVar("_S", bound="Subscriber")
 
 
 def to_payload(events: Sequence[Event]) -> dict[str, Any]:
@@ -64,7 +67,7 @@ class Publisher(abc.ABC):
     def publish(self, events: Sequence[Event]) -> None:
         """Send a batch.  Never called with an empty one."""
 
-    def __enter__(self) -> Self:
+    def __enter__(self: _P) -> _P:
         self.start()
         return self
 
@@ -108,7 +111,7 @@ class Subscriber(abc.ABC):
         rather than being trapped inside one.
         """
 
-    def __enter__(self) -> Self:
+    def __enter__(self: _S) -> _S:
         self.start()
         return self
 

@@ -5,7 +5,28 @@ entry lands here in the release it ships in.
 
 ## Unreleased
 
+### Python 3.10
+
+- **The floor is Python 3.10**, down from 3.11. The reasoning is the one
+  behind the dependency floors: a package meant to be co-installed into a
+  service does not get to choose the interpreter that service runs on, and
+  3.10 is what Ubuntu 22.04 ships, which a good deal of OpenStack still runs
+  on. Nothing in the package needed 3.11 -- two spellings did. `typing.Self`
+  is a bound `TypeVar`, which is how the same thing was written before 3.11,
+  and `enum.StrEnum` falls back to a `str, Enum` mixin whose `str()` is its
+  value, that being the only property of it the wire format rests on. CI runs
+  the suite on 3.10 alongside every other version, and the `lowest-direct`
+  job moved there, since it exists to install the oldest releases on the
+  oldest interpreter supported.
+
 ### Fixed
+
+- **An SSE stream no longer raises out of its own sleep on Python 3.10.** The
+  sleep between polls suppressed a bare `TimeoutError`, which catches nothing
+  there: `asyncio.TimeoutError` only became the builtin in 3.11 and is a
+  class of its own before that. It is spelled `asyncio.TimeoutError` now,
+  which is the same object from 3.11 on. Found by running the suite on 3.10,
+  which is the whole argument for testing a floor rather than declaring one.
 
 - **A failed atom now says what it failed of.** The fold layer has always
   understood `failure` and `revert_failure`; the listener never emitted them,

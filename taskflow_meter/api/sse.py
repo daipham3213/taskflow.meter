@@ -218,5 +218,8 @@ async def aiter_frames(
             await asyncio.sleep(interval)
         else:
             # Sleep, but wake immediately if the client leaves.
-            with contextlib.suppress(TimeoutError):
+            # asyncio.TimeoutError, spelled out: it is the builtin from
+            # 3.11 on, but a class of its own before that, so the bare
+            # name catches nothing on 3.10 and the sleep raises.
+            with contextlib.suppress(asyncio.TimeoutError):
                 await asyncio.wait_for(stop.wait(), interval)
