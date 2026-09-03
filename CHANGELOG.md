@@ -14,6 +14,13 @@ entry lands here in the release it ships in.
   shape the persistence datasource produces -- `models.failure_dict`, shared by
   both -- so a client cannot tell which producer it is reading.
 
+- **A flow's name is no longer lost when the graph is emitted first.** The
+  in-process producer emits `FLOW_STRUCTURE` before anything runs, so that is
+  the event a run gets seeded from -- and it carries no flow name, while the
+  state events that follow were dropping theirs. Snapshots from `attach()`
+  reported `name = ""` for the whole run. The name is now taken from whichever
+  event carries it.
+
 ### Documentation
 
 - **`docs/PLAN.md` is gone.** It was a pre-build plan, and by 1.0 it was

@@ -330,6 +330,25 @@ def test_nothing_is_left_registered_on_the_tasks() -> None:
 
 
 @pytest.mark.integration
+def test_the_flow_keeps_its_name_behind_the_structure_event() -> None:
+    # The graph is emitted before anything runs, so it is the event a run
+    # gets seeded from -- and it carries no flow name. The name arrives on
+    # every state event after it, and has to be taken from one of those or
+    # a client is told the flow is called "".
+    flow = linear_flow.Flow("named-flow").add(ProgressingTask("only"))
+    engine = engines.load(flow)
+
+    with attach(engine) as watched:
+        engine.run()
+        assert watched.flush(5.0)
+        assert watched.store is not None
+        snapshot = watched.store.get_flow(watched.run_id)
+
+    assert snapshot is not None
+    assert snapshot.name == "named-flow"
+
+
+@pytest.mark.integration
 def test_a_failed_task_reports_why_it_failed() -> None:
     # The state says a task failed; the failure says what of. Reading
     # persistence has always reported this, and watching the engine has

@@ -55,7 +55,12 @@ def fold(flow: FlowSnapshot, event: Event) -> FlowSnapshot:
     flow = replace(flow, observed_at=max(flow.observed_at, event.ts))
 
     if event.kind is EventKind.FLOW_STATE:
-        return replace(flow, state=event.state)
+        # The name arrives on these events too, and has to be taken from
+        # one of them when the run was seeded by something else: the
+        # in-process producer emits the graph before anything runs, and a
+        # structure event carries no name to seed from.
+        name = _optional_str(event.details.get("flow_name")) or flow.name
+        return replace(flow, state=event.state, name=name)
 
     if event.kind in (EventKind.ATOM_STATE, EventKind.ATOM_PROGRESS):
         if event.atom_name is None:
