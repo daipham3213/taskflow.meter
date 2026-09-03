@@ -28,8 +28,11 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+from taskflow import states
 from taskflow.listeners import base as tf_listeners
+from taskflow.types import failure as tf_failure
 
+from taskflow_meter import models
 from taskflow_meter.events import Event
 from taskflow_meter.events import EventKind
 from taskflow_meter.events import SequenceAllocator
@@ -100,9 +103,25 @@ class MeterListener(tf_listeners.Listener):
     ) -> None:
         extra: dict[str, Any] = {}
         if "result" in details:
+            result = details["result"]
             # Results are arbitrary application objects and are not
             # ours to copy around; their presence is the useful part.
-            extra["has_result"] = details["result"] is not None
+            extra["has_result"] = result is not None
+            # Except when the result *is* the failure, which is the one
+            # thing anybody watching a flow needs the detail of. Rendered
+            # in the same shape the persistence datasource reports, so a
+            # client cannot tell which producer it is reading.
+            if isinstance(result, tf_failure.Failure):
+                # Which one it is follows from the state, not from the
+                # intention: taskflow does not put an intention on these
+                # notifications, and only a revert that itself failed
+                # reaches REVERT_FAILURE.
+                key = (
+                    "revert_failure"
+                    if state == states.REVERT_FAILURE
+                    else "failure"
+                )
+                extra[key] = models.failure_dict(result)
         self._safely(
             EventKind.ATOM_STATE,
             state=state,

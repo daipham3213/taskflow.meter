@@ -19,14 +19,32 @@ datasources, the API and any transport only ever handle one vocabulary.
 
 from __future__ import annotations
 
+import sys
 import threading
 from collections.abc import Mapping
 from dataclasses import asdict
 from dataclasses import dataclass
 from dataclasses import field
-from enum import StrEnum
 from typing import Any
-from typing import Self
+from typing import TypeVar
+
+if sys.version_info >= (3, 11):
+    from enum import StrEnum
+else:
+    from enum import Enum
+
+    class StrEnum(str, Enum):
+        """As much of 3.11's ``StrEnum`` as this module relies on.
+
+        A plain ``str, Enum`` mixin renders as ``EventKind.FLOW_STATE``
+        under ``str()``, and the value is what goes on the wire.
+        """
+
+        def __str__(self) -> str:
+            return str.__str__(self)
+
+
+_E = TypeVar("_E", bound="Event")
 
 
 class EventKind(StrEnum):
@@ -77,7 +95,7 @@ class Event:
         return data
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+    def from_dict(cls: type[_E], data: Mapping[str, Any]) -> _E:
         """Rebuild from :meth:`to_dict` output.
 
         Unknown keys are rejected rather than dropped -- a transport

@@ -7,7 +7,7 @@ name = "taskflow-meter"
 dynamic = ["version"]
 description = "Monitoring interfaces (ASGI, WSGI, datasource) for OpenStack TaskFlow flow execution progress"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [
@@ -20,6 +20,7 @@ classifiers = [
     "Intended Audience :: System Administrators",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -51,10 +52,10 @@ all = [
 taskflow-meter = "taskflow_meter.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/daipham3213/taskflow-meter"
-Source = "https://github.com/daipham3213/taskflow-meter"
-Issues = "https://github.com/daipham3213/taskflow-meter/issues"
-Changelog = "https://github.com/daipham3213/taskflow-meter/releases"
+Homepage = "https://github.com/daipham3213/taskflow.meter"
+Source = "https://github.com/daipham3213/taskflow.meter"
+Issues = "https://github.com/daipham3213/taskflow.meter/issues"
+Changelog = "https://github.com/daipham3213/taskflow.meter/releases"
 
 # Plugin entry points are declared as their modules land -- one pointing at a
 # module that does not exist yet breaks discovery for the whole group.
@@ -139,7 +140,7 @@ include = [
 
 [tool.ruff]
 line-length = 79
-target-version = "py311"
+target-version = "py310"
 src = ["."]
 
 [tool.ruff.lint]
@@ -174,7 +175,7 @@ force-single-line = true
 docstring-code-format = true
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.10"
 strict = true
 warn_unreachable = true
 files = ["taskflow_meter", "tests", "tools", "examples"]

@@ -1,5 +1,11 @@
 # taskflow-meter
 
+[![ci](https://github.com/daipham3213/taskflow.meter/actions/workflows/ci.yml/badge.svg)](https://github.com/daipham3213/taskflow.meter/actions/workflows/ci.yml)
+[![conformance](https://github.com/daipham3213/taskflow.meter/actions/workflows/conformance.yml/badge.svg)](https://github.com/daipham3213/taskflow.meter/actions/workflows/conformance.yml)
+[![PyPI](https://img.shields.io/pypi/v/taskflow-meter.svg)](https://pypi.org/project/taskflow-meter/)
+[![Python versions](https://img.shields.io/pypi/pyversions/taskflow-meter.svg)](https://pypi.org/project/taskflow-meter/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 Monitoring interfaces — ASGI, WSGI, datasources, transports — for observing
 [OpenStack TaskFlow](https://opendev.org/openstack/taskflow) flow execution
 progress.
@@ -160,7 +166,7 @@ serving an empty stream that cannot be told apart from silence.
 
 ## Requirements
 
-- Python 3.11+
+- Python 3.10+
 - taskflow 4.2.0+
 - oslo.config 6.9.0+
 
@@ -223,8 +229,8 @@ CI also runs the suite with every declared dependency floor installed exactly,
 which is the only job that checks those floors are real. To reproduce it:
 
 ```bash
-uv lock --python 3.11 --resolution lowest-direct
-uv sync --python 3.11 --group dev --all-extras --resolution lowest-direct
+uv lock --python 3.10 --resolution lowest-direct
+uv sync --python 3.10 --group dev --all-extras --resolution lowest-direct
 uv run --frozen --no-sync pytest
 ```
 

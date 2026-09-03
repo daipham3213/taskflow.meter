@@ -5,6 +5,51 @@ entry lands here in the release it ships in.
 
 ## Unreleased
 
+### Python 3.10
+
+- **The floor is Python 3.10**, down from 3.11. The reasoning is the one
+  behind the dependency floors: a package meant to be co-installed into a
+  service does not get to choose the interpreter that service runs on, and
+  3.10 is what Ubuntu 22.04 ships, which a good deal of OpenStack still runs
+  on. Nothing in the package needed 3.11 -- two spellings did. `typing.Self`
+  is a bound `TypeVar`, which is how the same thing was written before 3.11,
+  and `enum.StrEnum` falls back to a `str, Enum` mixin whose `str()` is its
+  value, that being the only property of it the wire format rests on. CI runs
+  the suite on 3.10 alongside every other version, and the `lowest-direct`
+  job moved there, since it exists to install the oldest releases on the
+  oldest interpreter supported.
+
+### Fixed
+
+- **An SSE stream no longer raises out of its own sleep on Python 3.10.** The
+  sleep between polls suppressed a bare `TimeoutError`, which catches nothing
+  there: `asyncio.TimeoutError` only became the builtin in 3.11 and is a
+  class of its own before that. It is spelled `asyncio.TimeoutError` now,
+  which is the same object from 3.11 on. Found by running the suite on 3.10,
+  which is the whole argument for testing a floor rather than declaring one.
+
+- **A failed atom now says what it failed of.** The fold layer has always
+  understood `failure` and `revert_failure`; the listener never emitted them,
+  so watching an engine reported *that* a task failed and reading persistence
+  reported *why*. It now renders the `Failure` taskflow hands it, in the same
+  shape the persistence datasource produces -- `models.failure_dict`, shared by
+  both -- so a client cannot tell which producer it is reading.
+
+- **A flow's name is no longer lost when the graph is emitted first.** The
+  in-process producer emits `FLOW_STRUCTURE` before anything runs, so that is
+  the event a run gets seeded from -- and it carries no flow name, while the
+  state events that follow were dropping theirs. Snapshots from `attach()`
+  reported `name = ""` for the whole run. The name is now taken from whichever
+  event carries it.
+
+### Sharing a database with the host service
+
+- **`upgrade()` takes `version_table`.** The store's alembic tree kept its
+  revision in `alembic_version`, which is also where a host service keeps its
+  own -- so the two trees each read the other's revision as one they have never
+  heard of. Deployments that put the store in the service's database can now
+  give it a table of its own, and nothing changes for those that do not.
+
 ### Documentation
 
 - **`docs/PLAN.md` is gone.** It was a pre-build plan, and by 1.0 it was
@@ -19,6 +64,11 @@ entry lands here in the release it ships in.
   rules an embedded app has to obey.
 - The README no longer claims to be pre-alpha at milestone M0, and now has a
   documentation index. The guide's sections are numbered in sequence.
+- **The README carries badges** for the two CI workflows, the released
+  version, the Pythons that release supports, and the licence.
+- **The project URLs pointed at a repository that does not exist.** PyPI
+  matches on the repository, which is `taskflow.meter`; every link in the
+  package metadata said `taskflow-meter`, the PyPI name, and answered 404.
 
 ### An oslo.messaging transport
 

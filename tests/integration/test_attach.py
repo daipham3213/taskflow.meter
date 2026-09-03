@@ -327,3 +327,50 @@ def test_nothing_is_left_registered_on_the_tasks() -> None:
 
     assert seen == []
     assert threading.active_count() <= before
+
+
+@pytest.mark.integration
+def test_the_flow_keeps_its_name_behind_the_structure_event() -> None:
+    # The graph is emitted before anything runs, so it is the event a run
+    # gets seeded from -- and it carries no flow name. The name arrives on
+    # every state event after it, and has to be taken from one of those or
+    # a client is told the flow is called "".
+    flow = linear_flow.Flow("named-flow").add(ProgressingTask("only"))
+    engine = engines.load(flow)
+
+    with attach(engine) as watched:
+        engine.run()
+        assert watched.flush(5.0)
+        assert watched.store is not None
+        snapshot = watched.store.get_flow(watched.run_id)
+
+    assert snapshot is not None
+    assert snapshot.name == "named-flow"
+
+
+@pytest.mark.integration
+def test_a_failed_task_reports_why_it_failed() -> None:
+    # The state says a task failed; the failure says what of. Reading
+    # persistence has always reported this, and watching the engine has
+    # the failure in hand as it happens.
+    class Exploding(task.Task):
+        def execute(self) -> None:
+            raise ValueError("no appliance answered")
+
+    flow = linear_flow.Flow("demo").add(Exploding("boom"))
+    engine = engines.load(flow)
+
+    with attach(engine) as watched:
+        with pytest.raises(ValueError, match="no appliance answered"):
+            engine.run()
+        assert watched.flush(5.0)
+        assert watched.store is not None
+        atoms = watched.store.get_atoms(watched.run_id)
+
+    assert atoms is not None
+    (atom,) = atoms
+    assert atom.failure is not None
+    assert "ValueError" in atom.failure["exc_type_names"]
+    assert "no appliance answered" in atom.failure["exception_str"]
+    # And the same shape the persistence datasource reports.
+    assert set(atom.failure) >= {"exc_type_names", "exception_str"}

@@ -24,11 +24,13 @@ import abc
 from collections.abc import Iterable
 from dataclasses import dataclass
 from types import TracebackType
-from typing import Self
+from typing import TypeVar
 
 from taskflow_meter.events import Event
 from taskflow_meter.models import AtomSnapshot
 from taskflow_meter.models import FlowSnapshot
+
+_D = TypeVar("_D", bound="DataSource")
 
 #: Flows returned by a single unqualified listing.
 DEFAULT_FLOW_LIMIT = 50
@@ -96,7 +98,7 @@ class DataSource(abc.ABC):
     def stop(self) -> None:  # noqa: B027 - optional hook, not abstract
         """Release it again.  Idempotent, and safe to call unstarted."""
 
-    def __enter__(self) -> Self:
+    def __enter__(self: _D) -> _D:
         self.start()
         return self
 
