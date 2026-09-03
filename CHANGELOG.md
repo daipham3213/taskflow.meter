@@ -64,6 +64,11 @@ entry lands here in the release it ships in.
   rules an embedded app has to obey.
 - The README no longer claims to be pre-alpha at milestone M0, and now has a
   documentation index. The guide's sections are numbered in sequence.
+- **The README carries badges** for the two CI workflows, the released
+  version, the Pythons that release supports, and the licence.
+- **The project URLs pointed at a repository that does not exist.** PyPI
+  matches on the repository, which is `taskflow.meter`; every link in the
+  package metadata said `taskflow-meter`, the PyPI name, and answered 404.
 
 ### An oslo.messaging transport
 
