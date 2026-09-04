@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from taskflow_meter.datasource.sqlalchemy.models import metadata
 from taskflow_meter.datasource.sqlalchemy.source import SQLADataSource
+from taskflow_meter.datasource.sqlalchemy.source import alembic_config
 from taskflow_meter.datasource.sqlalchemy.source import upgrade
 
-__all__ = ["SQLADataSource", "metadata", "upgrade"]
+__all__ = ["SQLADataSource", "alembic_config", "metadata", "upgrade"]

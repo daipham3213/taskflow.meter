@@ -30,9 +30,13 @@ from collections.abc import Iterable
 from collections.abc import Iterator
 from dataclasses import asdict
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 
 import sqlalchemy as sa
+
+if TYPE_CHECKING:
+    from alembic.config import Config
 
 from taskflow_meter.datasource.base import DEFAULT_EVENT_LIMIT
 from taskflow_meter.datasource.base import DEFAULT_FLOW_LIMIT
@@ -371,11 +375,55 @@ def upgrade(
     database -- changing it later looks exactly like an unmigrated one.
     """
     from alembic import command
+
+    engine = sa.create_engine(url)
+    try:
+        # One live connection, handed over in ``attributes``.  The URL is
+        # parsed by SQLAlchemy, which understands URLs, and never by
+        # configparser, which does not.
+        with engine.begin() as connection:
+            config = alembic_config(
+                connection=connection, version_table=version_table
+            )
+            command.upgrade(config, revision)
+    finally:
+        engine.dispose()
+
+
+def alembic_config(
+    *,
+    url: str | None = None,
+    connection: sa.Connection | None = None,
+    version_table: str | None = None,
+) -> Config:
+    """Build the config this package's migrations run under.
+
+    Public because ``upgrade`` is not the only thing an operator runs:
+    ``downgrade``, ``stamp`` and ``--sql`` mode all need a config, and
+    building one by hand is how the escaping rule below gets forgotten.
+
+    Everything variable travels in ``config.attributes`` rather than as
+    a main option, because alembic hands main options to configparser,
+    which reads ``%`` as the start of an interpolation and rejects
+    anything that is not one. Escaping it to ``%%`` does work, but
+    only for whoever remembers; keeping the value out of configparser
+    altogether cannot be forgotten.
+
+    Pass *connection* for a live migration, or *url* for ``--sql`` mode,
+    which has no connection to offer.
+    """
     from alembic.config import Config
 
     config = Config()
-    config.set_main_option("script_location", str(MIGRATIONS))
-    config.set_main_option("sqlalchemy.url", url)
-    if version_table is not None:
-        config.set_main_option("version_table", version_table)
-    command.upgrade(config, revision)
+    # script_location has to be a main option -- alembic reads it from
+    # there to find the scripts.  It is a path inside this package
+    # rather than anything a caller supplies, but an install prefix
+    # containing "%" is unusual rather than impossible, so it gets the
+    # escaping that the URL no longer needs.
+    config.set_main_option(
+        "script_location", str(MIGRATIONS).replace("%", "%%")
+    )
+    config.attributes["url"] = url
+    config.attributes["connection"] = connection
+    config.attributes["version_table"] = version_table
+    return config
