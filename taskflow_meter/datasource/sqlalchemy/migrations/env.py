@@ -13,16 +13,21 @@
 """Alembic environment for the meter's own schema.
 
 Driven programmatically by :func:`taskflow_meter.datasource.sqlalchemy
-.upgrade`, so the URL arrives through the config rather than from an
-``alembic.ini`` a deployment would have to carry.
+.upgrade`, so the connection arrives through the config rather than from
+an ``alembic.ini`` a deployment would have to carry.
+
+Everything variable is read from ``config.attributes``, never from a
+main option: alembic passes main options through configparser, which
+treats ``%`` as an interpolation and rejects a percent-encoded password.
+See :func:`~taskflow_meter.datasource.sqlalchemy.source.alembic_config`.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
+import sqlalchemy as sa
 from alembic import context
-from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from taskflow_meter.datasource.sqlalchemy.models import metadata
@@ -39,12 +44,26 @@ DEFAULT_VERSION_TABLE = "alembic_version"
 
 
 def _version_table() -> str:
-    return config.get_main_option("version_table", DEFAULT_VERSION_TABLE)
+    return config.attributes.get("version_table") or DEFAULT_VERSION_TABLE
+
+
+def _url() -> str | None:
+    """Where to connect, when no live connection was handed over.
+
+    Falls back to the main option so that running these migrations from
+    a hand-written ``alembic.ini`` still works.  Escaping ``%`` is the
+    ini author's problem there, and ``%%`` is the documented convention
+    for it.
+    """
+    url = config.attributes.get("url")
+    if url is not None:
+        return str(url)
+    return config.get_main_option("sqlalchemy.url", None)
 
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=config.get_main_option("sqlalchemy.url"),
+        url=_url(),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -55,17 +74,29 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    connectable = config.attributes.get("connection", None)
-    if connectable is None:
-        connectable = engine_from_config(
-            config.get_section(config.config_ini_section, {}),
-            prefix="sqlalchemy.",
-            poolclass=pool.NullPool,
-        )
-        with connectable.connect() as connection:
-            _run(connection)
+    connection = config.attributes.get("connection")
+    if connection is not None:
+        # The usual path: somebody else owns the connection and the
+        # transaction around it.
+        _run(connection)
         return
-    _run(connectable)
+
+    url = _url()
+    if url is None:
+        # Reached only by a config built by hand that set neither.
+        # Saying so beats whatever SQLAlchemy makes of ``None``.
+        msg = (
+            "no connection and no url to migrate: build the config with "
+            "taskflow_meter.datasource.sqlalchemy.alembic_config()"
+        )
+        raise RuntimeError(msg)
+
+    engine = sa.create_engine(url, poolclass=pool.NullPool)
+    try:
+        with engine.connect() as owned:
+            _run(owned)
+    finally:
+        engine.dispose()
 
 
 def _run(connection: Any) -> None:
